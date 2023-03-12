@@ -263,20 +263,20 @@ def plot_shares(sharename,future,sharename2,future2):
     fig.add_trace(go.Scatter(x=future.index,
                     y=future['close_percent'],                    
                     mode='lines',
-                    line=dict(color='steelblue') ,
+                    line=dict(color='lightblue') ,
                     name=sharename),
                   secondary_y=False,) 
     fig.add_trace(go.Scatter(x=future.index,
                     y=future['vola'],                    
                     #yaxis='y2',
                     mode='lines',
-                    line=dict(color='lightblue') ,
+                    line=dict(color='steelblue') ,
                     name=f'{sharename[:5]} Volatility'),
                   secondary_y=True)     
     fig.add_trace(go.Scatter(x=ixdd,y=future.loc[ixdd]['vola'],
                              mode='markers',
                              name='DueDates',
-                             marker=dict(size=15,symbol='diamond',color='lightblue',
+                             marker=dict(size=15,symbol='diamond',color='steelblue',
                                          line=dict(width=2, color="DarkSlateGrey"))),
                              secondary_y=True)
     
@@ -284,20 +284,20 @@ def plot_shares(sharename,future,sharename2,future2):
     fig.add_trace(go.Scatter(x=future2.index,
                     y=future2['close_percent'],                    
                     mode='lines',
-                    line=dict(color='red') ,
+                    line=dict(color='pink') ,
                     name=sharename2),
                   secondary_y=False,) 
     fig.add_trace(go.Scatter(x=future2.index,
                     y=future2['vola'],                    
                     #yaxis='y2',
                     mode='lines',
-                    line=dict(color='pink') ,
+                    line=dict(color='red') ,
                     name=f'{sharename2[:5]} Volatility'),
                   secondary_y=True)     
     fig.add_trace(go.Scatter(x=ixdd,y=future2.loc[ixdd]['vola'],
                              mode='markers',
                              name=f'{sharename2[:5]} DueDates',
-                             marker=dict(size=15,symbol='circle',color='pink',
+                             marker=dict(size=15,symbol='circle',color='red',
                                          line=dict(width=2, color="DarkSlateGrey"))),
                              secondary_y=True)
     fig.update_layout(
