@@ -7,15 +7,16 @@ st.set_page_config(page_title="Option Investigator",
                 )
 
 def _get_latest(future):
-  latedate = future.index.min()
-  lateprice = future.loc[latedate].Close
+  latedate = future.dates.max()
+  
+  lateprice = future.loc[future.dates==latedate].Close.values[0]
   return latedate,lateprice
 
 @st.cache_data
 def get_share_data(symbol):
     history = opt.get_history(symbol)
     future  = opt.create_future(history)
-    price = history.iloc[-1].Close
+    
     rent = opt.get_current_rent(symbol)
     lastdate,lastprice = _get_latest(future)
     ret = rent[-1]/lastprice *100
@@ -34,17 +35,17 @@ def main():
     
 
     future1,lastdate1,lastprice1,rent1=get_share_data(symbolyahoo1)
-    st.markdown(f'{lastdate1}: {lastprice1:.2f}') 
+    st.markdown(f'{lastdate1}: **{lastprice1:.2f}**') 
     st.markdown(f'Dividend Return: {rent1:.2f}%')
   with col2:
     sharename2 = st.selectbox('Share 2',options=share_dict.keys(),index=2)
     symbol2,symbolyahoo2 = share_dict[sharename2][:2]
 
     future2,lastdate2,lastprice2,rent2=get_share_data(symbolyahoo2)
-    st.markdown(f'{lastdate2}: {lastprice2:.2f}')
+    st.markdown(f'{lastdate2}: **{lastprice2:.2f}**')
     st.markdown(f'Dividend Return: {rent2:.2f}%')
 
-  tab1,tab2 = st.tabs(['Share','Option'])
+  tab1,tab2,tab3 = st.tabs(['Share','Option','about'])
 
   #st.dataframe(history)
   #print(history)
@@ -54,6 +55,10 @@ def main():
     st.plotly_chart(fig)
   with tab2:
     st.write('here i am')
+  with tab3:
+    with open('README.md','r') as fr:
+      txt = fr.read()
+      st.write(txt)
 
 if __name__ == '__main__':
 

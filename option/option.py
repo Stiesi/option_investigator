@@ -271,7 +271,7 @@ def plot_shares(sharename,future,sharename2,future2):
                     #yaxis='y2',
                     mode='lines',
                     line=dict(color='steelblue') ,
-                    name=f'{sharename[:5]} Volatility'),
+                    name=f'{sharename[:5]}.. Volatility'),
                   secondary_y=True)     
     fig.add_trace(go.Scatter(x=ixdd,y=future.loc[ixdd]['vola'],
                              mode='markers',
@@ -292,7 +292,7 @@ def plot_shares(sharename,future,sharename2,future2):
                     #yaxis='y2',
                     mode='lines',
                     line=dict(color='red') ,
-                    name=f'{sharename2[:5]} Volatility'),
+                    name=f'{sharename2[:5]}.. Volatility'),
                   secondary_y=True)     
     fig.add_trace(go.Scatter(x=ixdd,y=future2.loc[ixdd]['vola'],
                              mode='markers',
@@ -306,7 +306,7 @@ def plot_shares(sharename,future,sharename2,future2):
           yaxis2=dict(side='right',title=f'Volatility in %'),
           #legend = dict(orientation = 'h', xanchor = "center", x = 0.5, y= 1)
           )
-    fig.update_layout(title='%s: %.2f  %s: %.2f'%(sharename,
+    fig.update_layout(title='Volatility Review for %s: %.2f  and  %s: %.2f'%(sharename,
                             future.Close.iloc[0],
                             sharename2,
                             future2.Close.iloc[0]))#,width=1500,height=400)
