@@ -258,17 +258,7 @@ def cumstd(series):
 
 def plot_shares(sharename,future,sharename2,future2):
 
-    #data.plot(x='prodates',y='Close')
-    avg=40
-    #opdates = option_periods(datap.index.min())
     ixdd = find_future_duedates(future)
-    #datap = create_future()
-    #datap = data.set_index('prodates')
-    #datap.sort_index(inplace=True)
-    #datap['vola']=datap['Close'].pct_change().rolling(avg).std()*(252**0.5)
-    #datap['vola']=cumstd(datap['Close'])*100
-    #data.plot(x='prodates',y='vola')
-    #fig = go.Figure()
     fig = make_subplots(specs=[[{"secondary_y": True}]])
     fig.add_trace(go.Scatter(x=future.index,
                     y=future['close_percent'],                    
@@ -516,19 +506,17 @@ def create_repos():
   indices = stock_data.get_all_indices()
   industries = stock_data.get_all_industries()
 
-  #stock_data = PyTickerSymbols()
   ixlist =['DAX','MDAX','AEX','CAC 40','IBEX 35','BEL 20','FTSE 100','SDAX']#,'NASDAQ 100','DOW JONES']
   repo = {}
   for market in ixlist:
     stocks = stock_data.get_stocks_by_index(market)
     stocklist = [stock for stock in stocks]
-    repo[market]=share_repo(stocklist)
-  #uk_stocks = stock_data.get_stocks_by_index('FTSE 100')
-  #dax_yahoo = stock_data.get_dax_frankfurt_yahoo_tickers()
+    repo[market]=share_repo(stocklist)  
+  
   return repo
 
 def _get_symbol(entry):
-  #if isinstance(entry['symbols'],list):
+  
   try:  
     return [entry['symbol'],entry['symbols'][0]['yahoo'],entry['symbols'][0]['google'],entry['isins'][0]] 
   except:
@@ -537,6 +525,5 @@ def _get_symbol(entry):
 
 
 def share_repo(my_iterator):
-  sharedict = {entry['name']: _get_symbol(entry) for entry in my_iterator if (type(entry) is dict) and (entry['symbol'] is not None)}
-  #gerdict = 
+  sharedict = {entry['name']: _get_symbol(entry) for entry in my_iterator if (type(entry) is dict) and (entry['symbol'] is not None)}  
   return sharedict
