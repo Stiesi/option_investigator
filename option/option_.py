@@ -96,6 +96,10 @@ def show_table(opt):
 def plot_options(sharename1,df1,price1,sharename2,df2,price2):
     norm_strikes = np.linspace(80,120,num=9)
     strikes1 = norm_strikes/100*price1
+    df1['norm_coptprices'] = df1.cprice/price1*100
+    df1['norm_poptprices'] = df1.pprice/price1*100
+    df2['norm_coptprices'] = df2.cprice/price2*100
+    df2['norm_poptprices'] = df2.pprice/price2*100
     fig = make_subplots(specs=[[{"secondary_y": True}]])
     fig.add_trace(go.Scatter(x=df1.shortcut,
                     y=df1['cprice'], 
@@ -104,13 +108,81 @@ def plot_options(sharename1,df1,price1,sharename2,df2,price2):
                     #hovertemplate = 'Price: %{text:.2f}<br>Date: %{customdata}',#<extra>%{sharename2}</extra>                    
                     mode='lines',
                     line=dict(color='lightblue') ,
-                    name=sharename1),
+                    name=f'Call {sharename1}'),
                   secondary_y=False,) 
-    
+    fig.add_trace(go.Scatter(x=df1.shortcut,
+                    y=df1['pprice'], 
+                    #text=future2['Close'] ,
+                    #customdata=future2['dates'].values,
+                    #hovertemplate = 'Price: %{text:.2f}<br>Date: %{customdata}',#<extra>%{sharename2}</extra>                    
+                    mode='lines',
+                    line=dict(color='steelblue') ,
+                    name=f'Put {sharename1}'),
+                  secondary_y=False,) 
+
+    fig.add_trace(go.Scatter(x=df2.shortcut,
+                    y=df2['cprice'], 
+                    #text=future2['Close'] ,
+                    #customdata=future2['dates'].values,
+                    #hovertemplate = 'Price: %{text:.2f}<br>Date: %{customdata}',#<extra>%{sharename2}</extra>                    
+                    mode='lines',
+                    line=dict(color='pink') ,
+                    name=f'Call {sharename2}'),
+                  secondary_y=False,) 
+    fig.add_trace(go.Scatter(x=df2.shortcut,
+                    y=df2['pprice'], 
+                    #text=future2['Close'] ,
+                    #customdata=future2['dates'].values,
+                    #hovertemplate = 'Price: %{text:.2f}<br>Date: %{customdata}',#<extra>%{sharename2}</extra>                    
+                    mode='lines',
+                    line=dict(color='red') ,
+                    name=f'Put {sharename2}'),
+                  secondary_y=False,) 
+######################################################  rel prices
+    fig.add_trace(go.Scatter(x=df1.shortcut,
+                    y=df1['norm_coptprices'], 
+                    #text=future2['Close'] ,
+                    #customdata=future2['dates'].values,
+                    #hovertemplate = 'Price: %{text:.2f}<br>Date: %{customdata}',#<extra>%{sharename2}</extra>                    
+                    mode='lines',
+                    line=dict(color='lightblue',dash='dash') ,
+                    name=f'Call {sharename1}'),
+                  secondary_y=True,) 
+    fig.add_trace(go.Scatter(x=df1.shortcut,
+                    y=df1['norm_poptprices'], 
+                    #text=future2['Close'] ,
+                    #customdata=future2['dates'].values,
+                    #hovertemplate = 'Price: %{text:.2f}<br>Date: %{customdata}',#<extra>%{sharename2}</extra>                    
+                    mode='lines',
+                    line=dict(color='steelblue',dash='dash') ,
+                    name=f'Put {sharename1}'),
+                  secondary_y=True,) 
+
+    fig.add_trace(go.Scatter(x=df2.shortcut,
+                    y=df2['norm_coptprices'], 
+                    #text=future2['Close'] ,
+                    #customdata=future2['dates'].values,
+                    #hovertemplate = 'Price: %{text:.2f}<br>Date: %{customdata}',#<extra>%{sharename2}</extra>                    
+                    mode='lines',
+                    line=dict(color='pink',dash='dash') ,
+                    name=f'Call {sharename2}'),
+                  secondary_y=True,) 
+    fig.add_trace(go.Scatter(x=df2.shortcut,
+                    y=df2['norm_poptprices'], 
+                    #text=future2['Close'] ,
+                    #customdata=future2['dates'].values,
+                    #hovertemplate = 'Price: %{text:.2f}<br>Date: %{customdata}',#<extra>%{sharename2}</extra>                    
+                    mode='lines',
+                    line=dict(color='red',dash='dash') ,
+                    name=f'Put {sharename2}'),
+                  secondary_y=True,) 
+
+
+
     fig.update_layout(
           #xaxis=dict(type='log'),
-          yaxis=dict(side='left',title='relative Option Price in %'),
-          yaxis2=dict(side='right',title=f'absolute Option Price1 in %'),
+          yaxis=dict(side='left',title='Option Price'),
+          yaxis2=dict(side='right',title=f'relative Option Price in %'),
           #legend = dict(orientation = 'h', xanchor = "center", x = 0.5, y= 1)
           )
     fig.update_layout(title='Option Prices for %s  and  %s'%(sharename1,

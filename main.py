@@ -60,7 +60,7 @@ def main():
     zinsp=st.sidebar.number_input('Interest Rate in %',value=2.0,min_value=-10.,max_value=50.,step=0.1)
     zins=zinsp/100.
 
-    st.markdown(f'{sharename1}')
+    st.markdown(f'{sharename1} Base {lastprice1:.2f}')
     ddates = opt.find_future_duedates(future1) # these are list of dates (indexes in future)
     df1_dates = opt.option_periods(lastdate1,quarters=8) # dataframe object
     df1_future = future1.loc[ddates]
@@ -85,7 +85,7 @@ def main():
     #  x = op_.bs(strike,lastprice1,zins,vola,tau,1,rent1)
     st.dataframe(df1_dates[['shortcut','vola','cprice','pprice']].round(2).T)
 
-    st.markdown(f'{sharename2}')
+    st.markdown(f'{sharename2} Base {lastprice2:.2f}')
 
     ddates = opt.find_future_duedates(future2) # these are list of dates (indexes in future)
     df2_dates = opt.option_periods(lastdate2,quarters=8) # dataframe object
@@ -104,7 +104,7 @@ def main():
     #                                    op_.bs(strike,price,zins,x.vola*0.01,x.normtime,-1,rent)[0],
     #                                    axis=1,strike=strike,price=lastprice1,zins=zins,rent=rent1/100)
     df2_dates = op_.bs_apply(df2_dates,strike,lastprice2,zins,rent2/100)
-    st.dataframe(df1_dates[['shortcut','vola','cprice','pprice']].round(2).T)
+    st.dataframe(df2_dates[['shortcut','vola','cprice','pprice']].round(2).T)
 
     #st.sidebar.write("# Option View")
     #opt1 = models.Option(aktie=sharename1,typ='C',basis=lastprice1,enddate=ddates.shortcut.iloc[5],aktkurs=lastprice1,vola=vola,zins=zins,div=rent1)
@@ -119,7 +119,7 @@ def main():
     #fig.update_yaxes2(showgrid=True, gridwidth=1, gridcolor='DarkBlue')
     fig1 = op_.plot_options(sharename1,df1_dates,lastprice1,sharename2,df2_dates,lastprice2)
     st.plotly_chart(fig1)
-
+    st.markdown('[Eurex] https://www.boerse.de/eurex/')
     #fig2 = op_.plot_opt(opt2,ddates,lastdate2)
     #st.plotly_chart(fig2)
 
