@@ -1,4 +1,4 @@
-# option_investigator
+# Option Investigator
 View and Analyse Share Options by Volatility View
 
 ## Scope
@@ -11,10 +11,16 @@ is computed by historical data. For dates of option due dates, the Volatility Va
 ## Plot
 The plot is just reversing the historical data to the future. THERE IS NO PREDICTION!
 
+Data for historical data and dividends is called from yahoo data base. 
+
+There is no warranty or responsibility for correct data and data analyses.
+
 
 Have fun!
 
 Jens
+
+12.03.2023
 
 
 

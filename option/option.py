@@ -261,13 +261,16 @@ def plot_shares(sharename,future,sharename2,future2):
     ixdd = find_future_duedates(future)
     fig = make_subplots(specs=[[{"secondary_y": True}]])
     fig.add_trace(go.Scatter(x=future.index,
-                    y=future['close_percent'],                    
+                    y=future['close_percent'], 
+                    text=future2['Close'] ,
+                    customdata=future2['dates'].values,
+                    hovertemplate = 'Price: %{text:.2f}<br>Date: %{customdata}',#<extra>%{sharename2}</extra>                    
                     mode='lines',
                     line=dict(color='lightblue') ,
                     name=sharename),
                   secondary_y=False,) 
     fig.add_trace(go.Scatter(x=future.index,
-                    y=future['vola'],                    
+                    y=future['vola'], 
                     #yaxis='y2',
                     mode='lines',
                     line=dict(color='steelblue') ,
@@ -283,6 +286,9 @@ def plot_shares(sharename,future,sharename2,future2):
     ############# second  ###
     fig.add_trace(go.Scatter(x=future2.index,
                     y=future2['close_percent'],                    
+                    text=future2['Close'] ,
+                    customdata=future2['dates'].values,
+                    hovertemplate = 'Price: %{text:.2f}<br>Date: %{customdata}',#<extra>%{sharename2}</extra>
                     mode='lines',
                     line=dict(color='pink') ,
                     name=sharename2),
