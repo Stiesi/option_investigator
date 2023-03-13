@@ -53,10 +53,10 @@ def bs(S,K,r,sig,tau,phi=1,rd=0):
 
 def bs_apply(df,strike,price,zins,rent):
     df['cprice']=df.apply(lambda x,strike,price,zins,rent: 
-                                        bs(strike,price,zins,x.vola*0.01,x.normtime,1,rent)[0],
+                                        bs(strike,price,zins,x.vola*0.01,x.normtime,-1,rent)[0],
                                         axis=1,strike=strike,price=price,zins=zins,rent=rent)
     df['pprice']=df.apply(lambda x,strike,price,zins,rent: 
-                                        bs(strike,price,zins,x.vola*0.01,x.normtime,-1,rent)[0],
+                                        bs(strike,price,zins,x.vola*0.01,x.normtime,1,rent)[0],
                                         axis=1,strike=strike,price=price,zins=zins,rent=rent)
     return df
 
@@ -108,6 +108,7 @@ def plot_options(sharename1,df1,price1,sharename2,df2,price2):
                     #hovertemplate = 'Price: %{text:.2f}<br>Date: %{customdata}',#<extra>%{sharename2}</extra>                    
                     mode='lines',
                     line=dict(color='lightblue') ,
+                    legendgroup='€',
                     name=f'Call {sharename1}'),
                   secondary_y=False,) 
     fig.add_trace(go.Scatter(x=df1.shortcut,
@@ -117,6 +118,7 @@ def plot_options(sharename1,df1,price1,sharename2,df2,price2):
                     #hovertemplate = 'Price: %{text:.2f}<br>Date: %{customdata}',#<extra>%{sharename2}</extra>                    
                     mode='lines',
                     line=dict(color='steelblue') ,
+                    legendgroup='€',
                     name=f'Put {sharename1}'),
                   secondary_y=False,) 
 
@@ -127,6 +129,7 @@ def plot_options(sharename1,df1,price1,sharename2,df2,price2):
                     #hovertemplate = 'Price: %{text:.2f}<br>Date: %{customdata}',#<extra>%{sharename2}</extra>                    
                     mode='lines',
                     line=dict(color='pink') ,
+                    legendgroup='€',
                     name=f'Call {sharename2}'),
                   secondary_y=False,) 
     fig.add_trace(go.Scatter(x=df2.shortcut,
@@ -135,6 +138,7 @@ def plot_options(sharename1,df1,price1,sharename2,df2,price2):
                     #customdata=future2['dates'].values,
                     #hovertemplate = 'Price: %{text:.2f}<br>Date: %{customdata}',#<extra>%{sharename2}</extra>                    
                     mode='lines',
+                    legendgroup='€',
                     line=dict(color='red') ,
                     name=f'Put {sharename2}'),
                   secondary_y=False,) 
@@ -146,7 +150,8 @@ def plot_options(sharename1,df1,price1,sharename2,df2,price2):
                     #hovertemplate = 'Price: %{text:.2f}<br>Date: %{customdata}',#<extra>%{sharename2}</extra>                    
                     mode='lines',
                     line=dict(color='lightblue',dash='dash') ,
-                    name=f'Call {sharename1}'),
+                    legendgroup='%',
+                    name=f'Call % {sharename1}'),
                   secondary_y=True,) 
     fig.add_trace(go.Scatter(x=df1.shortcut,
                     y=df1['norm_poptprices'], 
@@ -155,7 +160,8 @@ def plot_options(sharename1,df1,price1,sharename2,df2,price2):
                     #hovertemplate = 'Price: %{text:.2f}<br>Date: %{customdata}',#<extra>%{sharename2}</extra>                    
                     mode='lines',
                     line=dict(color='steelblue',dash='dash') ,
-                    name=f'Put {sharename1}'),
+                    legendgroup='%',
+                    name=f'Put % {sharename1}'),
                   secondary_y=True,) 
 
     fig.add_trace(go.Scatter(x=df2.shortcut,
@@ -165,7 +171,8 @@ def plot_options(sharename1,df1,price1,sharename2,df2,price2):
                     #hovertemplate = 'Price: %{text:.2f}<br>Date: %{customdata}',#<extra>%{sharename2}</extra>                    
                     mode='lines',
                     line=dict(color='pink',dash='dash') ,
-                    name=f'Call {sharename2}'),
+                    legendgroup='%',
+                    name=f'Call % {sharename2}'),
                   secondary_y=True,) 
     fig.add_trace(go.Scatter(x=df2.shortcut,
                     y=df2['norm_poptprices'], 
@@ -174,7 +181,8 @@ def plot_options(sharename1,df1,price1,sharename2,df2,price2):
                     #hovertemplate = 'Price: %{text:.2f}<br>Date: %{customdata}',#<extra>%{sharename2}</extra>                    
                     mode='lines',
                     line=dict(color='red',dash='dash') ,
-                    name=f'Put {sharename2}'),
+                    legendgroup='%',
+                    name=f'Put % {sharename2}'),
                   secondary_y=True,) 
 
 

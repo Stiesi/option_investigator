@@ -14,15 +14,15 @@ def _get_latest(future):
   lateprice = future.loc[future.dates==latedate].Close.values[0]
   return latedate,lateprice
 
-@st.cache_data
+@st.cache_data(ttl=3600,show_spinner='Fetch Data from yahoo')
 def get_share_data(symbol):
     history = opt.get_history(symbol)
     future  = opt.create_future(history)
     
-    rent = opt.get_current_rent(symbol)
+    rent = opt.get_current_rent(symbol)[-1]
     lastdate,lastprice = _get_latest(future)
-    ret = rent[-1]/lastprice *100
-    return((future,lastdate,lastprice,ret))
+    ret = rent/lastprice *100
+    return((future,lastdate,lastprice,ret,rent))
 
 def main():
   my_repo = opt.create_repos()
@@ -36,15 +36,20 @@ def main():
     symbol1,symbolyahoo1 = share_dict[sharename1][:2]
     
 
-    future1,lastdate1,lastprice1,rent1=get_share_data(symbolyahoo1)
-    st.markdown(f'{lastdate1}: **{lastprice1:.2f}**') 
+    future1,lastdate1,lastprice1,rent1,rent1abs=get_share_data(symbolyahoo1)
+    st.markdown(f'**{lastprice1:.2f}** $\quad\quad$    {lastdate1}')    
+    rent1_inp = st.number_input('Dividend expected:',value=rent1abs,min_value=0.,format='%.2f')
+    rent1 = rent1_inp/lastprice1*100 # in percent
     st.markdown(f'Dividend Return: {rent1:.2f}%')
   with col2:
     sharename2 = st.selectbox('Share 2',options=share_dict.keys(),index=2)
     symbol2,symbolyahoo2 = share_dict[sharename2][:2]
 
-    future2,lastdate2,lastprice2,rent2=get_share_data(symbolyahoo2)
-    st.markdown(f'{lastdate2}: **{lastprice2:.2f}**')
+    future2,lastdate2,lastprice2,rent2,rent2abs=get_share_data(symbolyahoo2)
+    st.markdown(f'**{lastprice2:.2f}** $\quad\quad$    {lastdate2}')
+    rent2_inp = st.number_input('Dividend expected:',value=rent2abs,min_value=0.,format='%.2f')
+    rent2 = rent2_inp/lastprice2*100 # in percent
+
     st.markdown(f'Dividend Return: {rent2:.2f}%')
 
   tab1,tab2,tab3 = st.tabs(['Share','Option','about'])
@@ -59,52 +64,72 @@ def main():
   with tab2:
     zinsp=st.sidebar.number_input('Interest Rate in %',value=2.0,min_value=-10.,max_value=50.,step=0.1)
     zins=zinsp/100.
+    ocol1,ocol2 = st.columns((1,1))
+    with ocol1:      
+      oin11,oin12 = st.columns((1,1))
+      with oin11:
+        strike1 = st.number_input(f'{symbol1} Base',value=lastprice1,format='%.2f',min_value=0.)
+      with oin12:
+        vscale1 = st.number_input(f'Volatility Scale Factor',value=1.0,format='%.2f',min_value=0.,key='vola_scale1')
 
-    st.markdown(f'{sharename1} Base {lastprice1:.2f}')
-    ddates = opt.find_future_duedates(future1) # these are list of dates (indexes in future)
-    df1_dates = opt.option_periods(lastdate1,quarters=8) # dataframe object
-    df1_future = future1.loc[ddates]
-    df1_dates['vola'] = df1_future['vola'].values
-    norm_time = (df1_dates.duedate - lastdate1).apply(lambda x: x.days/365.)
-    df1_dates['normtime']=norm_time
-    strike = lastprice1    
-    #opt1_price = [op_.bs(strike,lastprice1,zins,vola,tau,1,rent1)[0]
-    #                                     for (vola,tau) in df1_dates[['vola','normtime']].iterrows() ]
-    #opt1_price=[]
-    #df1_dates['cprice']=df1_dates.apply(lambda x,strike,price,zins,rent: 
-    #                                    op_.bs(strike,price,zins,x.vola*0.01,x.normtime,1,rent)[0],
-    #                                    axis=1,strike=strike,price=lastprice1,zins=zins,rent=rent1/100)
-    #df1_dates['pprice']=df1_dates.apply(lambda x,strike,price,zins,rent: 
-    #                                    op_.bs(strike,price,zins,x.vola*0.01,x.normtime,-1,rent)[0],
-    #                                    axis=1,strike=strike,price=lastprice1,zins=zins,rent=rent1/100)
-    df1_dates = op_.bs_apply(df1_dates,strike,lastprice1,zins,rent1/100)
+      
+      ddates = opt.find_future_duedates(future1) # these are list of dates (indexes in future)
+      df1_dates = opt.option_periods(lastdate1,quarters=8) # dataframe object
+      df1_future = future1.loc[ddates]
+      df1_dates['vola'] = df1_future['vola'].values*vscale1
+      norm_time = (df1_dates.duedate - lastdate1).apply(lambda x: x.days/365.)
+      df1_dates['normtime']=norm_time
+      strike = lastprice1    
+      #opt1_price = [op_.bs(strike,lastprice1,zins,vola,tau,1,rent1)[0]
+      #                                     for (vola,tau) in df1_dates[['vola','normtime']].iterrows() ]
+      #opt1_price=[]
+      #df1_dates['cprice']=df1_dates.apply(lambda x,strike,price,zins,rent: 
+      #                                    op_.bs(strike,price,zins,x.vola*0.01,x.normtime,1,rent)[0],
+      #                                    axis=1,strike=strike,price=lastprice1,zins=zins,rent=rent1/100)
+      #df1_dates['pprice']=df1_dates.apply(lambda x,strike,price,zins,rent: 
+      #                                    op_.bs(strike,price,zins,x.vola*0.01,x.normtime,-1,rent)[0],
+      #                                    axis=1,strike=strike,price=lastprice1,zins=zins,rent=rent1/100)
+      df1_dates = op_.bs_apply(df1_dates,strike1,lastprice1,zins,rent1/100)
 
-    #for row in df1_dates.iterrows():
-    #  vola=row.vola.value
-    #  tau=row.normtime.value
-    #  x = op_.bs(strike,lastprice1,zins,vola,tau,1,rent1)
-    st.dataframe(df1_dates[['shortcut','vola','cprice','pprice']].round(2).T)
+      #for row in df1_dates.iterrows():
+      #  vola=row.vola.value
+      #  tau=row.normtime.value
+      #  x = op_.bs(strike,lastprice1,zins,vola,tau,1,rent1)
+      #st.dataframe(df1_dates[['shortcut','vola','cprice','pprice']].round(2).T)
+      df1_edited = st.experimental_data_editor(df1_dates[['shortcut','vola','cprice','pprice']].round(2))
 
-    st.markdown(f'{sharename2} Base {lastprice2:.2f}')
+    with ocol2:
+      oin21,oin22 = st.columns((1,1))
+      with oin21:
+        strike2 = st.number_input(f'{symbol2} Base',value=lastprice2,format='%.2f',min_value=0.)
+      with oin22:
+        vscale2 = st.number_input(f'Volatility Scale Factor',value=1.0,format='%.2f',min_value=0.,key='vola_scale2')
 
-    ddates = opt.find_future_duedates(future2) # these are list of dates (indexes in future)
-    df2_dates = opt.option_periods(lastdate2,quarters=8) # dataframe object
-    df2_future = future2.loc[ddates]
-    df2_dates['vola'] = df2_future['vola'].values
-    norm_time = (df2_dates.duedate - lastdate2).apply(lambda x: x.days/365.)
-    df2_dates['normtime']=norm_time
-    strike = lastprice2
-    #opt1_price = [op_.bs(strike,lastprice1,zins,vola,tau,1,rent1)[0]
-    #                                     for (vola,tau) in df1_dates[['vola','normtime']].iterrows() ]
-    #opt1_price=[]
-    #df1_dates['cprice']=df1_dates.apply(lambda x,strike,price,zins,rent: 
-    #                                    op_.bs(strike,price,zins,x.vola*0.01,x.normtime,1,rent)[0],
-    #                                    axis=1,strike=strike,price=lastprice1,zins=zins,rent=rent1/100)
-    #df1_dates['pprice']=df1_dates.apply(lambda x,strike,price,zins,rent: 
-    #                                    op_.bs(strike,price,zins,x.vola*0.01,x.normtime,-1,rent)[0],
-    #                                    axis=1,strike=strike,price=lastprice1,zins=zins,rent=rent1/100)
-    df2_dates = op_.bs_apply(df2_dates,strike,lastprice2,zins,rent2/100)
-    st.dataframe(df2_dates[['shortcut','vola','cprice','pprice']].round(2).T)
+      ddates = opt.find_future_duedates(future2) # these are list of dates (indexes in future)
+      df2_dates = opt.option_periods(lastdate2,quarters=8) # dataframe object
+      df2_future = future2.loc[ddates]
+      df2_dates['vola'] = df2_future['vola'].values*vscale2
+      norm_time = (df2_dates.duedate - lastdate2).apply(lambda x: x.days/365.)
+      df2_dates['normtime']=norm_time
+      
+      #opt1_price = [op_.bs(strike,lastprice1,zins,vola,tau,1,rent1)[0]
+      #                                     for (vola,tau) in df1_dates[['vola','normtime']].iterrows() ]
+      #opt1_price=[]
+      #df1_dates['cprice']=df1_dates.apply(lambda x,strike,price,zins,rent: 
+      #                                    op_.bs(strike,price,zins,x.vola*0.01,x.normtime,1,rent)[0],
+      #                                    axis=1,strike=strike,price=lastprice1,zins=zins,rent=rent1/100)
+      #df1_dates['pprice']=df1_dates.apply(lambda x,strike,price,zins,rent: 
+      #                                    op_.bs(strike,price,zins,x.vola*0.01,x.normtime,-1,rent)[0],
+      #                                    axis=1,strike=strike,price=lastprice1,zins=zins,rent=rent1/100)
+      df2_dates = op_.bs_apply(df2_dates,strike2,lastprice2,zins,rent2/100)
+      st.dataframe(df2_dates[['shortcut','vola','cprice','pprice']].round(2))
+      #dfcol1,dfcol2 = st.columns((1.1,1))
+      #with dfcol1:
+      #  df2_edited = st.experimental_data_editor(df2_dates[['shortcut','vola']].round(2),)
+      #  df2_dates['vola']=df2_edited['vola']
+      #  df2_dates  = op_.bs_apply(df2_dates,strike2,lastprice2,zins,rent2/100)
+      #with dfcol2:
+      #  st.dataframe(df2_dates[['cprice','pprice']].round(2))
 
     #st.sidebar.write("# Option View")
     #opt1 = models.Option(aktie=sharename1,typ='C',basis=lastprice1,enddate=ddates.shortcut.iloc[5],aktkurs=lastprice1,vola=vola,zins=zins,div=rent1)
@@ -117,11 +142,13 @@ def main():
 
 
     #fig.update_yaxes2(showgrid=True, gridwidth=1, gridcolor='DarkBlue')
-    fig1 = op_.plot_options(sharename1,df1_dates,lastprice1,sharename2,df2_dates,lastprice2)
+    #fig1 = op_.plot_options(symbol1,df1_dates,lastprice1,symbol2,df2_dates,lastprice2)
+    fig1 = op_.plot_options(symbol1,df1_edited,lastprice1,symbol2,df2_dates,lastprice2)
     st.plotly_chart(fig1)
     st.markdown('[Eurex] https://www.boerse.de/eurex/')
     #fig2 = op_.plot_opt(opt2,ddates,lastdate2)
     #st.plotly_chart(fig2)
+    #st.markdown(f'{symbol1} {symbol2}')
 
   with tab3:
     with open('README.md','r') as fr:
