@@ -114,7 +114,7 @@ def find_future_duedates(future):
     opdates = option_periods(future.index.min(),quarters=8)
     # find closest day (index)
     # all indices close to due dates
-    ixdd = [abs((ddate-future.index).days).argmin() for ddate in opdates['duedate']]
+    ixdd = [abs((ddate-future.index)).days.argmin() for ddate in opdates['duedate']]
     return future.iloc[ixdd].index
 
 
