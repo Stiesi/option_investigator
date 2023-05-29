@@ -54,6 +54,7 @@ def option_periods(refdate, quarters=8):
     returns:
         pandas DataFrame with option names and list of dates
     '''
+    '''
     if isinstance(refdate, str):    
         dt = datetime.datetime.strptime(refdate, '%Y-%m-%d')
     else:
@@ -81,10 +82,37 @@ def option_periods(refdate, quarters=8):
         name = q1.strftime('%Y/%m')
         list_names.append(name)
         list_dates.append(q1)
+    '''
+    # new and shorter
+    list_dates = _duedates(refdate)
+    list_names = [q1.strftime('%Y/%m') for q1 in list_dates]
 
     df=pd.DataFrame({'shortcut':list_names,'duedate':list_dates})
     return df
 
+def _duedates(refdate):
+    dq={'q1':[(6,0),(9,0),(12,0),(6,1),(12,1),(6,2),(12,2),(12,3),(12,4)],
+        'q2':[(9,0),(12,0),(3,1),(6,1),(12,1),(6,2),(12,2),(12,3),(12,4)],
+        'q3':[(12,0),(3,1),(6,1),(9,1),(12,1),(6,2),(12,2),(12,3),(12,4)],
+        'q4':[(3,1),(6,1),(9,1),(12,1),(6,2),(12,2),(6,3),(12,3),(12,4)]
+        }
+    if isinstance(refdate, str):    
+        dt = datetime.datetime.strptime(refdate, '%Y-%m-%d')
+    else:
+        dt=refdate
+    nextdue = get_option_expiration(dt)
+    if dt.month < nextdue.month: # day is after due in actual month
+        dt = dt.replace(day=1)+relativedelta(months=1) #  1st of next month
+        
+    
+    # first 3 months
+    ddates=[get_option_expiration(dt+relativedelta(months=+month)) for month in range(3)]
+    quarter = (dt.month-1)//3 +1
+    qstr = f'q{quarter}'
+    for (mon,dyear) in dq[qstr]:
+        dateq = datetime.datetime(day=1,month=mon,year=dt.year)+relativedelta(years=dyear)
+        ddates.append(get_option_expiration(dateq).date()) # make time obj to date obj
+    return ddates
 
 @st.cache_data
 def tickerfilters():
@@ -110,6 +138,10 @@ def create_future(data):
 
 def find_future_duedates(future):
     # duedates of option need not to have a date entry in data (future)
+    # die nächsten drei Monate
+    #  +1 innerhalb des nächsten Jahres alle quartale
+    #  +2 im Folgejahr die Halbjahre
+    #  +3 und 4 die 12/0003 und 12/0004
     
     opdates = option_periods(future.index.min(),quarters=8)
     # find closest day (index)
@@ -250,7 +282,8 @@ def cumstd(series):
    # needs minimum 5 numbers
    nrmin=5
    myvals = series.pct_change()
-   data = [myvals.iloc[:i].std() for i in range(nrmin,len(series))]
+   #myvals = series
+   data = [myvals.iloc[:i].std() for i in range(nrmin,len(myvals))]
    # add first value for first 2 entries
    return np.array([data[0]]*nrmin+data)*(252**0.5)
 
@@ -376,6 +409,7 @@ def plot_share_histogram(share_name,data,tildate,volatility=0):
     #https://stackoverflow.com/questions/43284304/how-to-compute-volatility-standard-deviation-in-rolling-window-in-pandas
     # window
     y_vola=y.pct_change().rolling(ldays).std()*(252**0.5)
+    y_vola=y.rolling(ldays).std()*(252**0.5)
     
     #if volatility==0:        
     volatility_jj=y_vola.loc[data.revDate==due_date].values[0]
