@@ -33,7 +33,7 @@ def get_option_expiration(refdate):
             dt = datetime.datetime.strptime(refdate, '%Y-%m-%d')
     else:
         dt=refdate
-    option_expiration=dt + relativedelta(day=1, weekday=FR(3))
+    option_expiration=dt + relativedelta(day=1, weekday=FR(3)) # 3rd Friday
     if option_expiration < dt:
         option_expiration=option_expiration + relativedelta(months=+1,day=1, weekday=FR(3))
     return option_expiration
@@ -147,7 +147,8 @@ def find_future_duedates(future):
     # find closest day (index)
     # all indices close to due dates
     ixdd = [abs((ddate-future.index).days).argmin() for ddate in opdates['duedate']]
-    return future.iloc[ixdd].index
+    #ixdd = [min(ixi+1,len(future)-1) for ixi in ixdd]
+    return future.iloc[ixdd].index # due dates are clos, but not exact!, since projection of historical data to future, reflection may lay on weekends
 
 
 
