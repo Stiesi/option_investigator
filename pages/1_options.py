@@ -4,6 +4,7 @@ import streamlit as st
 
 #os.environ["eurex_margins"] = st.secrets['eurex_margins']
 import src.test_eurex as te
+import src.plot_options as po
 
 sym_repo = te.SYMBOLS
 
@@ -34,11 +35,17 @@ def get_margins(option_set):
 def get_markets():
     return te.markets()
 
+@st.cache_data
+def convert_df(df):
+    # IMPORTANT: Cache the conversion to prevent computation on every rerun
+    return df.to_csv().encode('utf-8')
+
 
 st.set_page_config(page_title="Option Investigator",    
                 )
 
 
+st.header('Eurex Option Data Viewer')
 #sym_repo  = get_shares()
 markets = get_markets()
 market = st.sidebar.selectbox('Market',options=markets.keys(),index=0)
@@ -51,15 +58,23 @@ symbol = sym_repo['reverseid'][share_name]
 #share_name = sym_repo[symbol][0]['sec_name']
 yahoo_symbol = te.get_yahoo_symb(symbol)
 
-try:
-    #st.write(share_name)
-    st.write(symbol,yahoo_symbol)
-except:
-    st.write('nono')
-
 history = te.get_history(yahoo_symbol)
 last_price = history.iloc[-1].Close
-st.markdown(f'Last Price:   **:blue[{last_price:.2f}]**')
+last_date = history.iloc[-1].dates
+#st.markdown(f'Last Price:   **:blue[{last_price:.2f}]**')
+
+head1,head2, head3 = st.columns((1,4,1))
+try:
+    #st.write(share_name)
+    with head1:
+        st.markdown(f'Eurex: **:red[{symbol}]**  **:blue[{last_date}]**')
+    with head2:
+        st.markdown(f'**:green[{share_name}]**')
+    with head3:
+        st.markdown(f' Xetra: **:blue[{yahoo_symbol}]** : **:blue[{last_price:.2f}] €** ')
+except:
+    st.write('something went wrong...')
+
 
 option_set = get_optionset(symbol)
 df = get_margins(option_set)  
@@ -70,7 +85,8 @@ date_len=len(mat_dates)
 
 col1,col2,col3=st.columns((2,1,1))
 with col1:
-    tol_1 = st.number_input('Filter Strike around Market Price in [%]',min_value=1,max_value=99,value=10,step=1)
+    tol_1 = st.slider('Strike Filter [%]',min_value=1,max_value=99,value=10,step=1,
+                      help='Filter only relevant Strike Values, in [%] around Market Price')
 with col2: 
     mindate = st.selectbox('Minimum Maturity',mat_dates,index=0)
 with col3: 
@@ -84,7 +100,9 @@ dff = te.df_filter_date(df_tol,mindate,maxdate).sort_values(by=['contract_date',
 #dff.style.apply(te.color_CP, column=['call_put_flag'], axis=1)
 
 #dff['ratio']=(dff['premium_margin']/100-dff.exercise_price)/last_price
-st.dataframe(dff[['contract_date','call_put_flag','exercise_price','version_number','component_margin','premium_margin']].style.apply(te.color_CP, column=['call_put_flag'], axis=1),
+showtable = st.checkbox('Show Table')
+if showtable:
+    st.dataframe(dff[['contract_date','call_put_flag','exercise_price','version_number','component_margin','premium_margin']].style.apply(te.color_CP, column=['call_put_flag'], axis=1),
              use_container_width=True,             
              column_config={
         #"product_id": "Symbol",        
@@ -109,7 +127,15 @@ st.dataframe(dff[['contract_date','call_put_flag','exercise_price','version_numb
         'premium_margin':st.column_config.NumberColumn(
             'Prem_Marg',format="%.2f"),
         },
-        hide_index=True,
+        hide_index=True,        
         )
+cpfilter = st.selectbox('Plot Calls/Puts',['Call','Put'])
+dfplot = df_tol.loc[df_tol['call_put_flag']==cpfilter[0]].sort_values(by=['contract_date','exercise_price'])
+fig_opt = po.plot_margins(dfplot,share_name,last_price)
+st.plotly_chart(fig_opt)
 
+st.sidebar.download_button('Download Option Table',
+                   data=convert_df(df),
+                   file_name = f'option_{symbol}.csv',
+                   mime='text/csv')
 

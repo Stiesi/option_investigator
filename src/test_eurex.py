@@ -235,6 +235,9 @@ def df_from_portfolio(resp):
        #'premium_margin_currency'
        ]]  # dataframe with 
 
+def get_option_experation(df):
+  # df is DataFrame from portfolio
+  return df['maturity'].sort_values().unique()
 
 # colorstyle pandas
 def color_CP(s, column):
@@ -246,7 +249,10 @@ def df_filter_strike(df:pd.DataFrame,last_price:float,tolerance:float):
   # yyyymm
 
   #until_year8 = (until_year)+1*10000 # add 4 digits
-  df['deviation']=abs(df['exercise_price']-last_price)/last_price
+  df['rel_strike']= df.exercise_price/last_price
+  df['rel_margin']= df.premium_margin/(last_price*100) # contract size 100
+  df['deviation'] = abs(df['rel_strike']-1.)
+
   return df.loc[df['deviation']<=tolerance]
 
 
