@@ -6,11 +6,23 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import streamlit as st
 
+def in_the_money(cpf,rel_strike):
+    if (cpf=='C' and rel_strike<1.) | (cpf=='P' and rel_strike > 1.):
+        return 2.
+    else:
+        return 0.1
+def plotly_symbol(cpf):
+    if cpf =='C':
+        return 'triangle-up'
+    else:
+        return 'triangle-down'
 
 def plot_margins(df,sharename='Aktie',last_price=100.):
 
     fig = make_subplots(specs=[[{"secondary_y": True}]])
-    df['mat_cat']= df.maturity.astype("string")
+    df['mat_cat']= df.contract_date.astype("string")
+    df['inmoney']=df.apply(lambda x: in_the_money(x.call_put_flag,x.rel_strike),axis=1)
+    df['psymbol']=df.call_put_flag.apply(plotly_symbol)
     fig.add_trace(go.Scatter(x=df.mat_cat,
                     y=df['rel_margin'], 
                     text=df['exercise_price'] ,
@@ -18,10 +30,14 @@ def plot_margins(df,sharename='Aktie',last_price=100.):
                     hovertemplate = 'Strike: %{text:.2f}<br>Date: %{x}<br>%Margin: %{y:.3f}<extra>Total Margin %{customdata}</extra>',
                     mode='markers',
                     #color='red',
-                    marker=dict(color=df['exercise_price'],size=10,colorscale='Rainbow'),
+                    marker=dict(color=df['exercise_price'],size=10,colorscale='Rainbow',
+                                symbol=df['psymbol'],
+                                line=dict(width=df.inmoney),
+                                ),
                     #line=dict(color='lightblue') ,
                     name=sharename),
                   secondary_y=False,) 
+    #fig.add_trace()
     fig.update_layout(
           xaxis=dict(title='Maturity Date',
                      categoryorder='category ascending',
