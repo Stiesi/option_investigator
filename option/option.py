@@ -409,7 +409,7 @@ def plot_share_histogram(share_name,data,tildate,volatility=0):
     #https://stackoverflow.com/questions/43284304/how-to-compute-volatility-standard-deviation-in-rolling-window-in-pandas
     # window
     y_vola=y.pct_change().rolling(ldays).std()*(252**0.5)
-    y_vola=y.rolling(ldays).std()*(252**0.5)
+    #y_vola=y.rolling(ldays).std()*(252**0.5)
     
     #if volatility==0:        
     volatility_jj=y_vola.loc[data.revDate==due_date].values[0]
