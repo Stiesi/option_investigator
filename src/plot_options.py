@@ -15,7 +15,7 @@ def plot_margins(df,sharename='Aktie',last_price=100.):
                     y=df['rel_margin'], 
                     text=df['exercise_price'] ,
                     customdata=df['premium_margin'].values,
-                    hovertemplate = 'Strike: %{text:.2f}<br>Date: %{x}<br>%Margin: %{y:.3f}<extra>%{customdata}</extra>',
+                    hovertemplate = 'Strike: %{text:.2f}<br>Date: %{x}<br>%Margin: %{y:.3f}<extra>Total Margin {customdata}</extra>',
                     mode='markers',
                     #color='red',
                     marker=dict(color=df['exercise_price'],size=10,colorscale='Rainbow'),
@@ -31,7 +31,7 @@ def plot_margins(df,sharename='Aktie',last_price=100.):
                      #ticktext=['%d'%x for x in df.maturity.sort_values().unique()],
                      ),
           yaxis=dict(side='left',
-                     title='Margin per contract (100)',
+                     title='% Margin per contract (100)',
                      title_font=dict(size=15, family='Arial', color='blue')
                      ),
           #yaxis2=dict(side='right',title=f'Volatility in %'),
