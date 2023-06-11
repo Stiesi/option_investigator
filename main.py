@@ -1,9 +1,9 @@
 import streamlit as st
-import pandas as pd
-import numpy as np
+#import pandas as pd
+#import numpy as np
 import option.option as opt
 import option.option_ as op_
-import option.models as models
+#import option.models as models
 
 st.set_page_config(page_title="Option Investigator",    
                 )
@@ -25,7 +25,7 @@ def get_share_data(symbol):
     return((future,lastdate,lastprice,ret,rent))
 
 def main():
-  my_repo = opt.create_repos()
+  my_repo = opt.create_repos() # dictionary with stock data
   market_key=st.sidebar.selectbox('Market',options=my_repo.keys(),index=0)
   share_dict=my_repo[market_key]
   
