@@ -80,6 +80,9 @@ option_set = get_optionset(symbol)
 df = get_margins(option_set)  
 mat_dates = df['maturity'].sort_values().unique()
 date_len=len(mat_dates)
+df['rel_strike']= df.exercise_price/last_price
+df['rel_margin']= df.premium_margin/(last_price*100) # contract size 100
+df['deviation'] = abs(df['rel_strike']-1.)
 
 
 
@@ -93,6 +96,7 @@ with col3:
     maxdate = st.selectbox('Maximum Maturity',mat_dates,index=date_len-1)
 
 #option_set = get_optionset(symbol,last_price,tolerance=tol_1/100.)
+
 
 df_tol = te.df_filter_strike(df,last_price,tol_1/100)
 # get margins of option_set

@@ -249,9 +249,6 @@ def df_filter_strike(df:pd.DataFrame,last_price:float,tolerance:float):
   # yyyymm
 
   #until_year8 = (until_year)+1*10000 # add 4 digits
-  df['rel_strike']= df.exercise_price/last_price
-  df['rel_margin']= df.premium_margin/(last_price*100) # contract size 100
-  df['deviation'] = abs(df['rel_strike']-1.)
 
   return df.loc[df['deviation']<=tolerance]
 
