@@ -25,7 +25,7 @@ def get_optionset(symbol):
 def get_history(symbol):
     return te.get_history(symbol)
 
-@st.cache_data(ttl=120)
+@st.cache_data(ttl=120,show_spinner='Fetch Data from Eurex')
 def get_margins(option_set):
     resp =te.get_portfolio_margins(option_set)
     df = te.df_from_portfolio(resp)
@@ -62,12 +62,16 @@ history = te.get_history(yahoo_symbol)
 last_price = history.iloc[-1].Close
 last_date = history.iloc[-1].dates
 #st.markdown(f'Last Price:   **:blue[{last_price:.2f}]**')
+option_set = get_optionset(symbol)
 
 head1,head2, head3 = st.columns((1,4,1))
 try:
     #st.write(share_name)
     with head1:
-        st.markdown(f'Eurex: **:red[{symbol}]**  **:blue[{last_date}]**')
+        if option_set[0]["live"]:
+            st.markdown(f'Eurex: **:green[{symbol}]**  **:blue[{last_date}]**')
+        else:
+            st.markdown(f'Eurex: **:red[{symbol}]**  **:blue[{last_date}]**')
     with head2:
         st.markdown(f'**:green[{share_name}]**')
     with head3:
@@ -76,7 +80,6 @@ except:
     st.write('something went wrong...')
 
 
-option_set = get_optionset(symbol)
 df = get_margins(option_set)  
 mat_dates = df['maturity'].sort_values().unique()
 date_len=len(mat_dates)
@@ -84,6 +87,15 @@ df['rel_strike']= df.exercise_price/last_price
 df['rel_margin']= df.premium_margin/(last_price*100) # contract size 100
 df['deviation'] = abs(df['rel_strike']-1.)
 
+#closest maturity next year
+next_year_maturity, one_year_margin_calls,one_year_margin_puts = te.get_yearpoint(df,last_price)
+nocol,ccol,pcol = st.columns((2,2,2))
+with nocol:
+    st.markdown(f'Rel. Margins at **{next_year_maturity}** ')
+with ccol:
+    st.markdown(f'**Call:** {one_year_margin_calls*100:.2f}%')
+with pcol:
+    st.markdown(f'**Put:** {one_year_margin_puts*100:.2f}%')
 
 
 col1,col2,col3=st.columns((2,1,1))
@@ -106,7 +118,7 @@ dff = te.df_filter_date(df_tol,mindate,maxdate).sort_values(by=['contract_date',
 #dff['ratio']=(dff['premium_margin']/100-dff.exercise_price)/last_price
 showtable = st.checkbox('Show Table')
 if showtable:
-    st.dataframe(dff[['contract_date','call_put_flag','exercise_price','version_number','component_margin','premium_margin']].style.apply(te.color_CP, column=['call_put_flag'], axis=1),
+    st.dataframe(dff[['contract_date','call_put_flag','exercise_price','version_number','component_margin','premium_margin','rel_margin']].style.apply(te.color_CP, column=['call_put_flag'], axis=1),
              use_container_width=True,             
              column_config={
         #"product_id": "Symbol",        
