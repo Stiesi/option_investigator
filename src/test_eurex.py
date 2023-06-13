@@ -28,17 +28,18 @@ except:
 api_header = {"X-DBP-APIKEY": eurex_key}
 
 effective_date = datetime.date.today() + datetime.timedelta(days=2)
-maturity_date = effective_date.replace(year=effective_date.year+1)
+#maturity_date = effective_date.replace(year=effective_date.year+1)
 
 
 def today_nextyear(year=1,month=0):
   # get today + 1 year + month  at int in yyyymm
   #maturity_date
+  maturity_date = effective_date.replace(year=effective_date.year+year,month=effective_date.month+month)
   ny_int = int(maturity_date.strftime('%Y%m'))
   return ny_int
 
 def get_closest_maturity(mat_dates):
-  next_year_maturity = today_nextyear(year=1,month=2)
+  next_year_maturity = today_nextyear(year=1,month=3)# adjust to 1 year 2 months , my become flexible
   next_year_maturity = mat_dates[np.argmin(abs(mat_dates - next_year_maturity))]
   return next_year_maturity
 
