@@ -49,6 +49,18 @@ def _interp_margin(df,last_price):
   one_year_margin = np.interp(last_price,strikes,margins)
   return one_year_margin
 
+def get_margins_atmarketprice(df,last_price):
+  # get percentage of margin in one year at actual price
+  # for calls and puts
+  mat_dates = df['maturity'].sort_values().unique()
+  mat_marketprice={}
+  for mdate in mat_dates:  
+    my_c=df[(df['maturity']==mdate)&(df['call_put_flag']=='C')].sort_values(by=['exercise_price'])
+    my_p=df[(df['maturity']==mdate)&(df['call_put_flag']=='P')].sort_values(by=['exercise_price'])
+    mat_marketprice[mdate]=(_interp_margin(my_c,last_price),_interp_margin(my_p,last_price))
+  return mat_marketprice
+
+
 
 def get_yearpoint(df,last_price):
   # get percentage of margin in one year at actual price

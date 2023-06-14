@@ -81,21 +81,27 @@ except:
 
 
 df = get_margins(option_set)  
-mat_dates = df['maturity'].sort_values().unique()
-date_len=len(mat_dates)
+# dict with maturity : (call margin %, put margin %)
 df['rel_strike']= df.exercise_price/last_price
 df['rel_margin']= df.premium_margin/(last_price*100) # contract size 100
 df['deviation'] = abs(df['rel_strike']-1.)
+market_prices = te.get_margins_atmarketprice(df,last_price) 
+mat_dates = market_prices.keys()
+
+date_len=len(mat_dates)
+
 
 #closest maturity next year
-next_year_maturity, one_year_margin_calls,one_year_margin_puts = te.get_yearpoint(df,last_price)
-nocol,ccol,pcol = st.columns((2,2,2))
+#next_year_maturity, one_year_margin_calls,one_year_margin_puts = te.get_yearpoint(df,last_price)
+nocol,ccol,pcol = st.columns((4,2,2))
 with nocol:
-    st.markdown(f'Rel. Margins at **{next_year_maturity}** ')
+    #st.markdown(f'Rel. Margins at **{next_year_maturity}** ')
+    maturity_select = st.selectbox(f'Rel. Margins at **maturity** ',options=mat_dates,index=6)
+    call_price,put_price = market_prices[maturity_select]
 with ccol:
-    st.markdown(f'**Call:** {one_year_margin_calls*100:.2f}%')
+    st.markdown(f'**Call:** {call_price*100:.2f}%')
 with pcol:
-    st.markdown(f'**Put:** {one_year_margin_puts*100:.2f}%')
+    st.markdown(f'**Put:** {put_price*100:.2f}%')
 
 
 col1,col2,col3=st.columns((2,1,1))
