@@ -187,12 +187,29 @@ def get_ticker(symbol):
         print('Problem')
     return  ticker
 
+def get_eurex_products_list():
+
+  products = requests.get(url_base + "products",
+                 params = {'extrafields':'underlying_isin,prod_name,exercise_style_flag'},
+                 headers = api_header).json()
+
+  #dprod = pd.DataFrame(products['products'])  # not needed
+
+  #all symbols in Eurex products
+  symbols_eurex = [[prod['product'],prod['prod_name'],prod['underlying_isin']] for prod in products['products'] if (
+                      prod['instrument_type'] =='option') & (prod['exercise_style_flag']!='E')]
+  #for prod in products['products']:
+  #  if prod['product'] in symbols.keys():
+  #    print(symbols[prod['product']], name_repo[symbols[prod['product']]])
+
+  print(len(symbols_eurex))
+  return symbols_eurex
 
 
 def get_eurex_products(SYMBOLS):
 
   products = requests.get(url_base + "products",
-                 params = {},
+                 params = {'extrafields':'underlying_isin'},
                  headers = api_header).json()
 
   #dprod = pd.DataFrame(products['products'])  # not needed

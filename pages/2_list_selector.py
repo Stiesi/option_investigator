@@ -47,10 +47,21 @@ def pd_stocks():
   stocks = stock_data.get_all_stocks()
   
   stocklist = [stock for stock in stocks]
-  repo = share_repo(stocklist) 
+  repo = share_repo(stocklist)   
   df_stocks = pd.DataFrame(repo).T
+  df_stocks['name']=df_stocks.index  
   return df_stocks
 
+@st.cache_data
+def eurex_symbols():
+  all_eurex = te.get_eurex_products_list()
+  eurex_df = pd.DataFrame(all_eurex,columns=['symbol','prod_name','underlying_isin'])
+  return eurex_df
+
+
+eurex_df = eurex_symbols()
+
+st.write(eurex_df[eurex_df['symbol']=='VOW'])
 
 # get a list of all shares available 
 df = pd_stocks() 
@@ -70,15 +81,17 @@ df = pd_stocks()
 st.dataframe(df)
 st.write(len(df))#,symbol,yahoo_symbol)
 
-all_eurex = te.get_eurex_products(None)
 
 #st.write(all_eurex)
 
 #found = [symbol for symbol in df.index if symbol in all_eurex]
 
 # known symbols in EUREX
-found = df[df['symbol'].isin(all_eurex)]
-st.dataframe(found.sort_index())
-st.write(len(found))#,symbol,yahoo_symbol)
+found = df['isin'].isin(eurex_df['underlying_isin'])
+#df_found = df[~found]
+#df_found = df[found]
+df_mix = df.merge(eurex_df,left_on='isin',right_on='underlying_isin',how='inner',suffixes=('_ticker','_eurex'))
+st.dataframe(df_mix.sort_index())
+st.write(len(df_mix))#,symbol,yahoo_symbol)
 
 
