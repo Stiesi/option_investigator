@@ -63,7 +63,7 @@ def markets():
   indices = stock_data.get_all_indices()
   industries = stock_data.get_all_industries()
 
-  ixlist =['DAX','MDAX','AEX','CAC 40','FTSE 100']#,'IBEX 35','BEL 20','SDAX']#,'NASDAQ 100','DOW JONES']
+  ixlist =['DAX','MDAX','AEX','CAC 40','FTSE 100','IBEX 35','BEL 20','SDAX']#,'NASDAQ 100','DOW JONES']
   repo = {}
   
   for market in ixlist:
