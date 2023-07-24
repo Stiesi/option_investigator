@@ -8,6 +8,7 @@ import datetime
 import os
 import pandas as pd
 import yfinance as yf
+import numpy as np
 
 #import option as opt
 
@@ -27,8 +28,48 @@ except:
 api_header = {"X-DBP-APIKEY": eurex_key}
 
 effective_date = datetime.date.today() + datetime.timedelta(days=2)
-maturity_date = effective_date.replace(year=effective_date.year+10)
+#maturity_date = effective_date.replace(year=effective_date.year+1)
 
+
+def today_nextyear(year=1,month=0):
+  # get today + 1 year + month  at int in yyyymm
+  #maturity_date
+  maturity_date = effective_date.replace(year=effective_date.year+year,month=effective_date.month+month)
+  ny_int = int(maturity_date.strftime('%Y%m'))
+  return ny_int
+
+def get_closest_maturity(mat_dates):
+  next_year_maturity = today_nextyear(year=1,month=3)# adjust to 1 year 2 months , my become flexible
+  next_year_maturity = mat_dates[np.argmin(abs(mat_dates - next_year_maturity))]
+  return next_year_maturity
+
+def _interp_margin(df,last_price):
+  strikes = df.exercise_price.values
+  margins = df.rel_margin.values
+  one_year_margin = np.interp(last_price,strikes,margins)
+  return one_year_margin
+
+def get_margins_atmarketprice(df,last_price):
+  # get percentage of margin in one year at actual price
+  # for calls and puts
+  mat_dates = df['maturity'].sort_values().unique()
+  mat_marketprice={}
+  for mdate in mat_dates:  
+    my_c=df[(df['maturity']==mdate)&(df['call_put_flag']=='C')].sort_values(by=['exercise_price'])
+    my_p=df[(df['maturity']==mdate)&(df['call_put_flag']=='P')].sort_values(by=['exercise_price'])
+    mat_marketprice[mdate]=(_interp_margin(my_c,last_price),_interp_margin(my_p,last_price))
+  return mat_marketprice
+
+
+
+def get_yearpoint(df,last_price):
+  # get percentage of margin in one year at actual price
+  # for calls and puts
+  mat_dates = df['maturity'].sort_values().unique()
+  next_year_maturity = get_closest_maturity(mat_dates)
+  my_c=df[(df['maturity']==next_year_maturity)&(df['call_put_flag']=='C')].sort_values(by=['exercise_price'])
+  my_p=df[(df['maturity']==next_year_maturity)&(df['call_put_flag']=='P')].sort_values(by=['exercise_price'])
+  return next_year_maturity,_interp_margin(my_c,last_price),_interp_margin(my_p,last_price)
 
 
 def tickerfilters():
@@ -193,6 +234,7 @@ def get_options(symbol):
   #actual_series = [x for x in series['list_series'] if abs(x['exercise_price']-last_price)/last_price < tolerance ]
   #[print (x['contract_maturity'],f"{x['exercise_price']:.2f}") for x in actual_series]
   options = [dict(
+            live=series["live"],
             product_id=symbol,
               contract_maturity=x['contract_maturity'],
               exercise_price=x['exercise_price'],
