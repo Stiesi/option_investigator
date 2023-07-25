@@ -6,3 +6,4 @@ yfinance
 pytickersymbols
 scipy
 pydantic
+deta==1.2.0

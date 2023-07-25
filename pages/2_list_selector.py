@@ -95,3 +95,31 @@ st.dataframe(df_mix.sort_index())
 st.write(len(df_mix))#,symbol,yahoo_symbol)
 
 
+
+from deta import Deta
+
+# Connect to Deta Base with your Data Key
+deta = Deta(st.secrets["eurex_base"])
+
+# Create a new database "example-db"
+# If you need a new database, just use another name.
+db = deta.Base("eurex_base")
+
+if st.button('Refresh Database'):
+  for key,row in df_mix.to_dict(orient='index').items():
+    #print(row)
+    #st.write(row)
+    try:
+      db.put(row,key=row['symbol_ticker'])
+    except:
+      db.update(row,key=row['symbol_ticker'])
+ # db.put_many(df_mix.to_dict(orient='index')) # cannot put more than 25
+
+### how to call the database
+"---"
+"Here's everything stored in the database:"
+# This reads all items from the database and displays them to your app.
+# db_content is a list of dictionaries. You can do everything you want with it.
+db_content = db.fetch().items
+st.write(db_content)
+print(db_content[0])
