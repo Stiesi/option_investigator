@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from deta import Deta
+import json
 
 
 # Connect to Deta Base with your Data Key
@@ -51,21 +52,71 @@ def delete_wls_name(name):
     db_wlshare.delete(data['key'])
 
 
-# Create a new database "example-db"
-# If you need a new database, just use another name.
+def dataframe_with_selections(df,preselect=[]):
+    df_with_selections = df.copy()
+    df_with_selections.insert(0, "Select", False)
+    # set all preselected to True
+    df_with_selections.loc[df_with_selections['symbol_ticker'].isin(preselect),'Select']=True
 
+
+    # Get dataframe row-selections from user with st.data_editor
+    edited_df = st.data_editor(
+        df_with_selections,
+        hide_index=True,
+        column_config={"Select": st.column_config.CheckboxColumn(required=True)},
+        disabled=df.columns,
+    )
+
+    # Filter the dataframe using the temporary column, then drop the column
+    selected_rows = edited_df[edited_df.Select]
+    return selected_rows.drop('Select', axis=1)
 
 db_df = read_base()
 st.dataframe(db_df)
 
-msel  = st.selectbox('Share',options=db_df['name'])
-dataset = db_df[db_df['name']==msel]
-st.write(dataset)
+tab1,tab2,tab3 = st.tabs(['Watchlists','Share Selector','Option Selector'])
+with tab1:
+    col1,col2,col3 = st.columns((1,1,1))
+    with col1:
+        new = st.button('New')
+    watchlists = db_wlshare.fetch().items
+    watchlists_names = [watchlist['name'] for watchlist in watchlists]
+    if watchlists:  # watchlists exist
+        name_selected = st.selectbox('Watchlist',watchlists_names)
+        wls_selected = db_wlshare.fetch(dict(name=name_selected)).items[0]
+        list_of_tickers = json.loads(wls_selected['watchlist_shares'])['symbol_ticker'].values()
 
-with st.form("form"):
-    name = st.text_input("Watch List Name")
-    age = st.number_input("Your age")
-    submitted = st.form_submit_button("Store in database")
+        #selected = list_of_tickers
+    else: 
+        name_selected = 'Watchlist 1'
+        list_of_tickers = []
+    
+    ws_create = st.text_input('New Watchlist',value='Watchlist 1')
+    
 
-if submitted:
-    db_wlshare.put({"name": name, "age": age})
+with tab2:
+    st.write(name_selected)
+    selection = dataframe_with_selections(db_df[['name','indices','symbol_ticker']],list_of_tickers)
+    st.write("Your selection:")
+    st.write(db_df.loc[selection.index])
+
+    # Create a new database "example-db"
+    # If you need a new database, just use another name.
+
+
+
+    with st.form("form"):
+        name = st.text_input("Watch List Name",value=name_selected)
+        
+        create = st.form_submit_button("Store in database")
+        update = st.form_submit_button("Update in database")
+
+    if create:
+        listofshares = db_df[['symbol_ticker','isin']].loc[selection.index].to_json()
+        db_wlshare.put({"name": name, "watchlist_shares": listofshares})
+    if update:
+        data = db_wlshare.fetch(name=name)
+        db_wlshare.update({"name": name, "watchlist_shares": db_df[['symbol_ticker','isin']].loc[selection.index]})
+
+with tab3:
+    st.write('Hi')
