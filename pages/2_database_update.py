@@ -22,7 +22,8 @@ def _get_symbol(entry):
   
   try:  
     #return [entry['symbol'],entry['symbols'][0]['yahoo'],entry['symbols'][0]['google'],entry['isins'][0]] 
-    return dict(symbol=entry['symbol'],yahoo=entry['symbols'][0]['yahoo'],google=entry['symbols'][0]['google'],isin=entry['isins'][0])
+    return dict(symbol=entry['symbol'],yahoo=entry['symbols'][0]['yahoo'],google=entry['symbols'][0]['google'],
+                isin=entry['isins'][0],indices=entry['indices'])
   except:
      print (entry['symbols'])
      return None
