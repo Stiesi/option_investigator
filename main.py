@@ -4,6 +4,7 @@ import streamlit as st
 import option.option as opt
 import option.option_ as op_
 #import option.models as models
+import src.test_eurex as optex
 
 st.set_page_config(page_title="Option Investigator",    
                 )
@@ -23,6 +24,16 @@ def get_share_data(symbol):
     lastdate,lastprice = _get_latest(future)
     ret = rent/lastprice *100
     return((future,lastdate,lastprice,ret,rent))
+
+@st.cache_data(ttl=120,show_spinner='Fetch Data from Eurex')
+def get_margins(option_set):
+    resp =optex.get_portfolio_margins(option_set)
+    df = optex.df_from_portfolio(resp)
+    return df
+
+@st.cache_data
+def get_optionset(symbol):
+    return optex.get_options(symbol)
 
 def main():
   my_repo = opt.create_repos() # dictionary with stock data
@@ -57,7 +68,25 @@ def main():
   #st.dataframe(history)
   #print(history)
   with tab1:
-    fig = opt.plot_shares(sharename1,future1,sharename2,future2)
+    ######################
+    if 1:      
+      option_set1 = get_optionset(symbol1)
+      df1 = get_margins(option_set1)  
+      # dict with maturity : (call margin %, put margin %)
+      market_prices1 = optex.get_margins_atmarketprice(df1,lastprice1) 
+      mat_dates = market_prices1.keys()
+
+      #date_len=len(mat_dates)
+      option_set2 = get_optionset(symbol2)
+      df2 = get_margins(option_set2)  
+      # dict with maturity : (call margin %, put margin %)
+      market_prices2 = optex.get_margins_atmarketprice(df2,lastprice2) 
+
+      # PLOT these market prices
+      fig = opt.plot_shares_2(sharename1,future1,sharename2,future2,market_prices1,market_prices2)
+    ######################
+    else:
+      fig = opt.plot_shares(sharename1,future1,sharename2,future2)
   #fig = plot_share(sharename,history,history.prodates.max(),volatility=0.2)
     st.plotly_chart(fig)
 
@@ -96,7 +125,7 @@ def main():
       #  tau=row.normtime.value
       #  x = op_.bs(strike,lastprice1,zins,vola,tau,1,rent1)
       #st.dataframe(df1_dates[['shortcut','vola','cprice','pprice']].round(2).T)
-      df1_edited = st.experimental_data_editor(df1_dates[['shortcut','vola','cprice','pprice']].round(2))
+      df1_edited = st.data_editor(df1_dates[['shortcut','vola','cprice','pprice']].round(2))
 
     with ocol2:
       oin21,oin22 = st.columns((1,1))

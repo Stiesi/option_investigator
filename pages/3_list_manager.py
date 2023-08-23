@@ -42,6 +42,17 @@ def wls_update(wls:Watchlist):
 def wls_delete(key:str):    
     return db_wlshare.delete(key)
 
+def refreshlists():
+    all_lists = wls_read_all()
+    if not all_lists: # empty
+        initial_list='Watchlist 1'
+        mywls = Watchlist(key=initial_list,name=initial_list,symbols=[])
+        ok = wls_put(mywls)
+        all_lists = wls_read_all()
+    # make list
+    listofwatchlists = [f"{inr}. {wls['name']}" for inr,wls in enumerate(all_lists)]
+    return all_lists,listofwatchlists
+
 
 # def read_all_wls():
 #     db_content = db_wlshare.fetch().items
@@ -98,24 +109,35 @@ def dataframe_with_selections(df,preselect=[]):
 db_df = read_base()
 #st.dataframe(db_df)
 
-all_lists = wls_read_all()
-listofwatchlists = [wls['name'] for wls in all_lists]
+all_lists,listofwatchlists = refreshlists()
 
-mylist = st.sidebar.selectbox('Watchlist',options=listofwatchlists)
+mylist = st.sidebar.selectbox('Watchlist',options=listofwatchlists,index=0)
 # dict of selected name
 data = all_lists[listofwatchlists.index(mylist)]
 mywls = Watchlist(key=data['key'],name=data['name'],symbols=data['symbols'])
 mykey = mywls.key
 
 
-menu = ['New','View','Update','Delete']
+menu = ['New','View','Update','Rename','Delete']
 select = st.sidebar.selectbox('Action',options=menu,index=1)
 
 
 if select =='New':
     newcount = len(listofwatchlists)+1
     name = st.text_input("Watch List Name",value='Watchlist %d'%newcount)
-    
+    createlist = st.button('Create List')
+    if createlist:
+        mywls = Watchlist(key=name,name=name,symbols=[])
+        try:
+            ok = wls_put(mywls)
+            if ok:
+                st.success('%s saved'%name)
+                all_lists,listofwatchlists = refreshlists()
+
+        except:
+            st.error('List %s could not be created!'%name)
+
+if select=='xxx':
 
     selection = dataframe_with_selections(db_df[['name','indices','symbol_ticker']],[])
     st.write("Your selection:")
@@ -131,6 +153,21 @@ if select =='New':
             st.success('%s saved'%name)
             mywls = Watchlist(key=ok['key'],name=ok['name'],symbols=ok['symbols'])
             mykey = mywls.key
+
+if select =='View':
+    st.header(mywls.name)
+    #if mykey not in listofwatchlists:
+    #    mykey = listofwatchlists[0]
+    mywls = wls_read(mykey)
+    #st.write(mywls)
+    #selection = dataframe_with_selections(db_df[['name','indices','symbol_ticker']],mywls['symbols'])
+    st.dataframe(db_df.loc[db_df['symbol_ticker'].isin(mywls.symbols)])
+
+if select=='Rename':
+    name = st.text_input("Watch List Name",value=mywls.name)
+    mywls.name=name
+    wls_update(mywls)
+
 
 if select=='Update':
     mywls = wls_read(mykey)
@@ -156,14 +193,12 @@ if select=='Delete':
         ok = wls_delete(mykey)
         if ok:
             st.success('%s deleted'%mywls.name)
+            #all_lists = wls_read_all()
+            
+
+
         select='View'
 
-if select =='View':
-    st.header(mywls.name)
-    mywls = wls_read(mykey)
-    #st.write(mywls)
-    #selection = dataframe_with_selections(db_df[['name','indices','symbol_ticker']],mywls['symbols'])
-    st.dataframe(db_df.loc[db_df['symbol_ticker'].isin(mywls.symbols)])
     
     
 

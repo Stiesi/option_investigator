@@ -290,6 +290,51 @@ def cumstd(series):
    return np.array([data[0]]*nrmin+data)*(252**0.5)
 
 
+def plot_shares_2(sharename,future,sharename2,future2,agio1,agio2):
+    # extend plotting to time agio (volatility)
+    # extra lines
+    df_all1=pd.DataFrame.from_dict(agio1,orient='index',columns=['call','put'])
+    df_all2=pd.DataFrame.from_dict(agio2,orient='index',columns=['call','put'])
+    # 2 years plot
+    lastdate = datetime.datetime.now() + datetime.timedelta(days=2*365)    
+    df_a1=df_all1[df_all1.index< lastdate]
+    df_a2=df_all2[df_all2.index< lastdate]
+    fig = plot_shares(sharename,future,sharename2,future2)
+    fig.add_trace(go.Scatter(
+        x=df_a1.index,
+        y=(1+df_a1.call)*100,
+        mode='markers+lines',
+        line=dict(color='blue'),
+        name=f'Calls@market {sharename[:5]}'),
+        secondary_y=False,
+    )
+    fig.add_trace(go.Scatter(
+        x=df_a2.index,
+        y=(1+df_a2.call)*100,
+        mode='markers+lines',
+        line=dict(color='red'),
+        name=f'Calls@market {sharename2[:5]}'),
+        secondary_y=False,
+    )
+    fig.add_trace(go.Scatter(
+        x=df_a1.index,
+        y=(1+df_a1.put)*100,
+        mode='markers+lines',
+        line=dict(color='steelblue'),
+        name=f'Putss@market {sharename[:5]}'),
+        secondary_y=False,
+    )
+    fig.add_trace(go.Scatter(
+        x=df_a2.index,
+        y=(1+df_a2.put)*100,
+        mode='markers+lines',
+        line=dict(color='pink'),        
+        name=f'Puts@market {sharename2[:5]}'),
+        secondary_y=False,
+    )
+    return fig
+
+
 
 def plot_shares(sharename,future,sharename2,future2):
 

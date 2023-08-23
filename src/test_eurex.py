@@ -52,11 +52,14 @@ def _interp_margin(df,last_price):
 def get_margins_atmarketprice(df,last_price):
   # get percentage of margin in one year at actual price
   # for calls and puts
-  mat_dates = df['maturity'].sort_values().unique()
+  if 'rel_margin' not in df.columns:
+      df['rel_margin']= df.premium_margin/(last_price*100) # contract size 100
+  mat_ints = df['contract_date'].sort_values().unique()
+  mat_dates = [datetime.datetime.strptime(str(m),'%Y%m%d') for m in mat_ints]
   mat_marketprice={}
-  for mdate in mat_dates:  
-    my_c=df[(df['maturity']==mdate)&(df['call_put_flag']=='C')].sort_values(by=['exercise_price'])
-    my_p=df[(df['maturity']==mdate)&(df['call_put_flag']=='P')].sort_values(by=['exercise_price'])
+  for mint,mdate in zip(mat_ints,mat_dates):  
+    my_c=df[(df['contract_date']==mint)&(df['call_put_flag']=='C')].sort_values(by=['exercise_price'])
+    my_p=df[(df['contract_date']==mint)&(df['call_put_flag']=='P')].sort_values(by=['exercise_price'])
     mat_marketprice[mdate]=(_interp_margin(my_c,last_price),_interp_margin(my_p,last_price))
   return mat_marketprice
 
