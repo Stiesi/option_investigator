@@ -30,6 +30,8 @@ api_header = {"X-DBP-APIKEY": eurex_key}
 effective_date = datetime.date.today() + datetime.timedelta(days=2)
 #maturity_date = effective_date.replace(year=effective_date.year+1)
 
+def format_datetime(dt):
+  return dt.strftime('%Y-%m-%d')
 
 def today_nextyear(year=1,month=0):
   # get today + 1 year + month  at int in yyyymm
@@ -342,7 +344,7 @@ if __name__=='__main__':
   # get margins of option_set
   resp = get_portfolio_margins(option_set)
   df = df_from_portfolio(resp)
-  print(df_filter_date(df,202312,202412))
+  print(df_filter_date(df,datetime.datetime.strptime('202312','%Y%m'),datetime.datetime.strptime('202412','%Y%m')))
 ##############
 '''
 Index(['iid', 'product_id', 'contract_date', 'maturity', 'call_put_flag',
