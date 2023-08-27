@@ -120,6 +120,20 @@ def markets():
   return repo
 
 def create_repos():
+  '''
+    Create a Repositories of shares based on Markets
+
+    Repo is saved locally as EUREX_DB.json, tries to reopen this file
+
+    Returns:
+    symbols : dict[str,dict]
+              EUREX symbol: info and symbols of share
+              .
+              .
+              .
+              reverseid: name of share: EUREX symbol
+
+  '''
 
   if os.path.exists('EUREX_DB.json'):
     with open('EUREX_DB.json') as fr:
@@ -153,7 +167,24 @@ def create_repos():
   return symbols
 
 
-def get_history(symbol):
+def get_history(symbol:str):
+   '''
+    Call Yahoo Finance to get history (2y) for symbol
+
+    parameter:
+    ----------
+    symbol   str
+    yahoo symbol (e.g. BAS.DE or BAYN.DE)
+
+    Return:
+    ------
+    history dataframe
+    dataframe according to yahoo ticker object returned for symbol
+     additinally created:
+         dates : date from index (oldest first, latest last)
+         reversedates: reverse ordered dates for all rows  (latest first, oldest last)
+         prodates: shifted reversed dates to future from today (looks like history values mirrored at today)
+   '''
    ticker = get_ticker(symbol)
    history=ticker.history(period='2y')
    today = datetime.date.today()
@@ -164,12 +195,22 @@ def get_history(symbol):
    # mirror dates from past to future:
    #   add delta days from reversdates to today
    history['prodates']=(today - history.dates).apply(lambda x: today + x) # shift reversedates to future
-
    return history
 
 
-def get_ticker(symbol):
-    
+def get_ticker(symbol:str):
+    '''
+      call yahoo finance to get history data
+
+      parameter:
+      ----------
+      symbol   str
+      yahoo symbol (e.g. BAS.DE or BAYN.DE)
+
+      return:
+      ticker obj
+      ticker obj from yahoo finance
+    '''
     print(">>", symbol, end=' ... ')
     try:
         ticker = yf.Ticker(symbol)    
@@ -193,6 +234,14 @@ def get_ticker(symbol):
     return  ticker
 
 def get_eurex_products_list():
+  '''
+  Function get all european option products from Eurex in terms of Eurex
+
+  Return:
+
+  symbols_eurex list of lists
+   lists of product, prod_name,underlying_isin
+  '''
 
   products = requests.get(url_base + "products",
                  params = {'extrafields':'underlying_isin,prod_name,exercise_style_flag'},

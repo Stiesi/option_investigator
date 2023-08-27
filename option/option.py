@@ -651,6 +651,9 @@ def plot_share_histogram(share_name,data,tildate,volatility=0):
     
 @st.cache_data
 def create_repos():
+  import src.test_eurex as te
+  # only use stock that exist in EUREX
+  eurex_existnames = list(te.SYMBOLS['reverseid'].keys())
   stock_data = PyTickerSymbols()
   countries = stock_data.get_all_countries()
   indices = stock_data.get_all_indices()
@@ -660,7 +663,7 @@ def create_repos():
   repo = {}
   for market in ixlist:
     stocks = stock_data.get_stocks_by_index(market)
-    stocklist = [stock for stock in stocks]
+    stocklist = [stock for stock in stocks if stock['name'] in eurex_existnames]
     repo[market]=share_repo(stocklist)  
   
   return repo

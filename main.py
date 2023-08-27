@@ -35,6 +35,7 @@ def get_margins(option_set):
 def get_optionset(symbol):
     return optex.get_options(symbol)
 
+import src.test_eurex as te
 def main():
   my_repo = opt.create_repos() # dictionary with stock data
   market_key=st.sidebar.selectbox('Market',options=my_repo.keys(),index=0)
@@ -44,8 +45,14 @@ def main():
   col1,col2 = st.columns((1,1))
   with col1:
     sharename1 = st.selectbox('Share 1',options=share_dict.keys(),index=1)
-    symbol1,symbolyahoo1 = share_dict[sharename1][:2]
+    #symbol1,symbolyahoo1 = share_dict[sharename1][:2]
     
+    # Eurex symbol (3-4 Chars)
+    symbol1 = te.SYMBOLS['reverseid'][sharename1]
+    #share_name = sym_repo[symbol][0]['sec_name']
+    symbolyahoo1 = te.get_yahoo_symb(symbol1)
+
+
 
     future1,lastdate1,lastprice1,rent1,rent1abs=get_share_data(symbolyahoo1)
     st.markdown(f'**{lastprice1:.2f}** $\quad\quad$    {lastdate1}')    
@@ -54,7 +61,12 @@ def main():
     st.markdown(f'Dividend Return: {rent1:.2f}%')
   with col2:
     sharename2 = st.selectbox('Share 2',options=share_dict.keys(),index=2)
-    symbol2,symbolyahoo2 = share_dict[sharename2][:2]
+    #symbol2,symbolyahoo2 = share_dict[sharename2][:2]
+
+    # Eurex symbol (3-4 Chars)
+    symbol2 = te.SYMBOLS['reverseid'][sharename2]
+    #share_name = sym_repo[symbol][0]['sec_name']
+    symbolyahoo2 = te.get_yahoo_symb(symbol2)
 
     future2,lastdate2,lastprice2,rent2,rent2abs=get_share_data(symbolyahoo2)
     st.markdown(f'**{lastprice2:.2f}** $\quad\quad$    {lastdate2}')
