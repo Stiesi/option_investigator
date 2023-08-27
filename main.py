@@ -56,7 +56,7 @@ def main():
 
     future1,lastdate1,lastprice1,rent1,rent1abs=get_share_data(symbolyahoo1)
     st.markdown(f'**{lastprice1:.2f}** $\quad\quad$    {lastdate1}')    
-    rent1_inp = st.number_input('Dividend expected:',value=float(rent1abs),min_value=0.,format='%.2f')
+    rent1_inp = st.number_input('Dividend expected:',value=float(rent1abs),min_value=0.,format='%.2f',key='dividend1')
     rent1 = rent1_inp/lastprice1*100 # in percent
     st.markdown(f'Dividend Return: {rent1:.2f}%')
   with col2:
@@ -70,7 +70,7 @@ def main():
 
     future2,lastdate2,lastprice2,rent2,rent2abs=get_share_data(symbolyahoo2)
     st.markdown(f'**{lastprice2:.2f}** $\quad\quad$    {lastdate2}')
-    rent2_inp = st.number_input('Dividend expected:',value=float(rent2abs),min_value=0.,format='%.2f')
+    rent2_inp = st.number_input('Dividend expected:',value=float(rent2abs),min_value=0.,format='%.2f',key='dividend2')
     rent2 = rent2_inp/lastprice2*100 # in percent
 
     st.markdown(f'Dividend Return: {rent2:.2f}%')
