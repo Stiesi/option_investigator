@@ -289,6 +289,105 @@ def cumstd(series):
    # add first value for first 2 entries
    return np.array([data[0]]*nrmin+data)*(252**0.5)
 
+def colorsets(share_no,plotid,opacity):
+    # return colorstring dep on share and plotid
+    colors = [['95,182,217','95,182,217','95,182,217','95,197,217'],
+              ['235,28,35','199,38,43','214,82,79','235,115,113']
+              ]
+    return f'rgba({colors[share_no][plotid]},{opacity})'
+      
+
+def _plot_area(fig,df_a,sharename,share_id):
+    fig.add_trace(go.Scatter(
+        x=df_a.index,
+        y=(1-df_a.call)*100,
+        mode='markers+lines',
+        fill=None,
+        line=dict(color=colorsets(share_id,2,1),dash='dash'),
+        showlegend=False,
+        legendgroup=sharename,   
+        name='+Calls@market'),
+        secondary_y=False,
+    )
+    fig.add_trace(go.Scatter(
+        x=df_a.index,
+        y=(1+df_a.call)*100,
+        mode='markers+lines',
+        line=dict(color=colorsets(share_id,2,1),dash='dash'),
+        fill='tonexty',
+        fillcolor = colorsets(share_id,2,0.1),#'lightblue',
+        #opacity=0.1,     
+        legendgroup=sharename,   
+        name='-Calls@market'),
+        secondary_y=False,
+    )
+    # Puts
+    fig.add_trace(go.Scatter(
+        x=df_a.index,
+        y=(1-df_a.put)*100,
+        mode='markers+lines',
+        fill=None,
+        line=dict(color=colorsets(share_id,3,1)),
+        legendgroup=sharename,   
+        showlegend=False,
+        name='+Puts@market'),
+        secondary_y=False,
+    )
+    fig.add_trace(go.Scatter(
+        x=df_a.index,
+        y=(1+df_a.put)*100,
+        mode='markers+lines',
+        line=dict(color=colorsets(share_id,3,1)),
+        fill='tonexty',
+        fillcolor = colorsets(share_id,3,0.1),
+        #opacity=0.1,        
+        legendgroup=sharename,   
+        name='-Puts@market'),
+        secondary_y=False,
+    )
+    return fig
+   
+
+def plot_shares_2(sharename,future,sharename2,future2,agio1,agio2):
+    # extend plotting to time agio (volatility)
+    # extra lines
+    df_all1=pd.DataFrame.from_dict(agio1,orient='index',columns=['call','put'])
+    df_all2=pd.DataFrame.from_dict(agio2,orient='index',columns=['call','put'])
+    # 2 years plot
+    lastdate = datetime.datetime.now() + datetime.timedelta(days=2.5*365)    
+    df_a1=df_all1[df_all1.index< lastdate]
+    df_a2=df_all2[df_all2.index< lastdate]
+    fig = plot_shares(sharename,future,sharename2,future2)
+    # call a1
+    fig = _plot_area(fig,df_a1,sharename,0)
+    fig = _plot_area(fig,df_a2,sharename2,1)
+
+    # fig.add_trace(go.Scatter(
+    #     x=df_a2.index,
+    #     y=(1+df_a2.call)*100,
+    #     mode='markers+lines',
+    #     line=dict(color='red'),
+    #     name=f'Calls@market {sharename2[:5]}'),
+    #     secondary_y=False,
+    # )
+    # fig.add_trace(go.Scatter(
+    #     x=df_a1.index,
+    #     y=(1+df_a1.put)*100,
+    #     mode='markers+lines',
+    #     line=dict(color='steelblue'),
+    #     name=f'Putss@market {sharename[:5]}'),
+    #     secondary_y=False,
+    # )
+    # fig.add_trace(go.Scatter(
+    #     x=df_a2.index,
+    #     y=(1+df_a2.put)*100,
+    #     mode='markers+lines',
+    #     line=dict(color='pink'),        
+    #     name=f'Puts@market {sharename2[:5]}'),
+    #     secondary_y=False,
+    # )
+    return fig
+
 
 
 def plot_shares(sharename,future,sharename2,future2):
@@ -302,21 +401,25 @@ def plot_shares(sharename,future,sharename2,future2):
                     hovertemplate = 'Price: %{text:.2f}<br>Date: %{customdata}',#<extra>%{sharename2}</extra>                    
                     mode='lines',
                     line=dict(color='lightblue') ,
-                    name=sharename),
+                    legendgroup=sharename,   
+                    legendgrouptitle=dict(text=sharename),
+                    name='Close %'),
                   secondary_y=False,) 
     fig.add_trace(go.Scatter(x=future.index,
-                    y=future['vola'], 
+                    y=100+future['vola'], 
                     #yaxis='y2',
                     mode='lines',
+                    legendgroup=sharename,   
                     line=dict(color='steelblue') ,
-                    name=f'{sharename[:5]}.. Volatility'),
-                  secondary_y=True)     
-    fig.add_trace(go.Scatter(x=ixdd,y=future.loc[ixdd]['vola'],
+                    name='Volatility'),
+                  secondary_y=False)     
+    fig.add_trace(go.Scatter(x=ixdd,y=(100+future.loc[ixdd]['vola']),
                              mode='markers',
                              name='DueDates',
+                             legendgroup=sharename,   
                              marker=dict(size=15,symbol='diamond',color='steelblue',
                                          line=dict(width=2, color="DarkSlateGrey"))),
-                             secondary_y=True)
+                             secondary_y=False)
     
     ############# second  ###
     fig.add_trace(go.Scatter(x=future2.index,
@@ -325,26 +428,31 @@ def plot_shares(sharename,future,sharename2,future2):
                     customdata=future2['dates'].values,
                     hovertemplate = 'Price: %{text:.2f}<br>Date: %{customdata}',#<extra>%{sharename2}</extra>
                     mode='lines',
+                    legendgrouptitle=dict(text=sharename2),
+                    legendgroup=sharename2,   
                     line=dict(color='pink') ,
-                    name=sharename2),
+                    name='Close %'),
                   secondary_y=False,) 
     fig.add_trace(go.Scatter(x=future2.index,
-                    y=future2['vola'],                    
+                    y=(100+future2['vola']), 
                     #yaxis='y2',
                     mode='lines',
                     line=dict(color='red') ,
-                    name=f'{sharename2[:5]}.. Volatility'),
-                  secondary_y=True)     
-    fig.add_trace(go.Scatter(x=ixdd,y=future2.loc[ixdd]['vola'],
+                    legendgroup=sharename2,  
+                    name='Volatility'),
+                  secondary_y=False)     
+    fig.add_trace(go.Scatter(x=ixdd,y=100+future2.loc[ixdd]['vola'],
                              mode='markers',
-                             name=f'{sharename2[:5]} DueDates',
+                             legendgroup=sharename2,   
+                
+                             name='DueDates',
                              marker=dict(size=15,symbol='circle',color='red',
                                          line=dict(width=2, color="DarkSlateGrey"))),
-                             secondary_y=True)
+                             secondary_y=False)
     fig.update_layout(
           #xaxis=dict(type='log'),
           yaxis=dict(side='left',title='relative Share Price in %'),
-          yaxis2=dict(side='right',title=f'Volatility in %'),
+          #yaxis2=dict(side='right',title=f'Volatility in %'),
           #legend = dict(orientation = 'h', xanchor = "center", x = 0.5, y= 1)
           )
     fig.update_layout(title='Volatility Review for %s: %.2f  and  %s: %.2f'%(sharename,
@@ -543,6 +651,9 @@ def plot_share_histogram(share_name,data,tildate,volatility=0):
     
 @st.cache_data
 def create_repos():
+  import src.test_eurex as te
+  # only use stock that exist in EUREX
+  eurex_existnames = list(te.SYMBOLS['reverseid'].keys())
   stock_data = PyTickerSymbols()
   countries = stock_data.get_all_countries()
   indices = stock_data.get_all_indices()
@@ -552,7 +663,7 @@ def create_repos():
   repo = {}
   for market in ixlist:
     stocks = stock_data.get_stocks_by_index(market)
-    stocklist = [stock for stock in stocks]
+    stocklist = [stock for stock in stocks if stock['name'] in eurex_existnames]
     repo[market]=share_repo(stocklist)  
   
   return repo

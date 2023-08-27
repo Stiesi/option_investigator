@@ -4,6 +4,7 @@ import streamlit as st
 import option.option as opt
 import option.option_ as op_
 #import option.models as models
+import src.test_eurex as optex
 
 st.set_page_config(page_title="Option Investigator",    
                 )
@@ -24,6 +25,17 @@ def get_share_data(symbol):
     ret = rent/lastprice *100
     return((future,lastdate,lastprice,ret,rent))
 
+@st.cache_data(ttl=120,show_spinner='Fetch Data from Eurex')
+def get_margins(option_set):
+    resp =optex.get_portfolio_margins(option_set)
+    df = optex.df_from_portfolio(resp)
+    return df
+
+@st.cache_data
+def get_optionset(symbol):
+    return optex.get_options(symbol)
+
+import src.test_eurex as te
 def main():
   my_repo = opt.create_repos() # dictionary with stock data
   market_key=st.sidebar.selectbox('Market',options=my_repo.keys(),index=0)
@@ -33,8 +45,14 @@ def main():
   col1,col2 = st.columns((1,1))
   with col1:
     sharename1 = st.selectbox('Share 1',options=share_dict.keys(),index=1)
-    symbol1,symbolyahoo1 = share_dict[sharename1][:2]
+    #symbol1,symbolyahoo1 = share_dict[sharename1][:2]
     
+    # Eurex symbol (3-4 Chars)
+    symbol1 = te.SYMBOLS['reverseid'][sharename1]
+    #share_name = sym_repo[symbol][0]['sec_name']
+    symbolyahoo1 = te.get_yahoo_symb(symbol1)
+
+
 
     future1,lastdate1,lastprice1,rent1,rent1abs=get_share_data(symbolyahoo1)
     st.markdown(f'**{lastprice1:.2f}** $\quad\quad$    {lastdate1}')    
@@ -43,7 +61,12 @@ def main():
     st.markdown(f'Dividend Return: {rent1:.2f}%')
   with col2:
     sharename2 = st.selectbox('Share 2',options=share_dict.keys(),index=2)
-    symbol2,symbolyahoo2 = share_dict[sharename2][:2]
+    #symbol2,symbolyahoo2 = share_dict[sharename2][:2]
+
+    # Eurex symbol (3-4 Chars)
+    symbol2 = te.SYMBOLS['reverseid'][sharename2]
+    #share_name = sym_repo[symbol][0]['sec_name']
+    symbolyahoo2 = te.get_yahoo_symb(symbol2)
 
     future2,lastdate2,lastprice2,rent2,rent2abs=get_share_data(symbolyahoo2)
     st.markdown(f'**{lastprice2:.2f}** $\quad\quad$    {lastdate2}')
@@ -57,7 +80,25 @@ def main():
   #st.dataframe(history)
   #print(history)
   with tab1:
-    fig = opt.plot_shares(sharename1,future1,sharename2,future2)
+    ######################
+    if 1:      
+      option_set1 = get_optionset(symbol1)
+      df1 = get_margins(option_set1)  
+      # dict with maturity : (call margin %, put margin %)
+      market_prices1 = optex.get_margins_atmarketprice(df1,lastprice1) 
+      mat_dates = market_prices1.keys()
+
+      #date_len=len(mat_dates)
+      option_set2 = get_optionset(symbol2)
+      df2 = get_margins(option_set2)  
+      # dict with maturity : (call margin %, put margin %)
+      market_prices2 = optex.get_margins_atmarketprice(df2,lastprice2) 
+
+      # PLOT these market prices
+      fig = opt.plot_shares_2(sharename1,future1,sharename2,future2,market_prices1,market_prices2)
+    ######################
+    else:
+      fig = opt.plot_shares(sharename1,future1,sharename2,future2)
   #fig = plot_share(sharename,history,history.prodates.max(),volatility=0.2)
     st.plotly_chart(fig)
 
@@ -96,7 +137,7 @@ def main():
       #  tau=row.normtime.value
       #  x = op_.bs(strike,lastprice1,zins,vola,tau,1,rent1)
       #st.dataframe(df1_dates[['shortcut','vola','cprice','pprice']].round(2).T)
-      df1_edited = st.experimental_data_editor(df1_dates[['shortcut','vola','cprice','pprice']].round(2))
+      df1_edited = st.data_editor(df1_dates[['shortcut','vola','cprice','pprice']].round(2))
 
     with ocol2:
       oin21,oin22 = st.columns((1,1))

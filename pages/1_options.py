@@ -45,7 +45,7 @@ st.set_page_config(page_title="Option Investigator",
                 )
 
 
-st.header('Eurex Option Data Viewer')
+st.header('Eurex Option Margin Viewer')
 #sym_repo  = get_shares()
 markets = get_markets()
 market = st.sidebar.selectbox('Market',options=markets.keys(),index=0)
@@ -53,7 +53,7 @@ share_name = st.sidebar.selectbox('Share',options=(markets[market]).keys(),index
 
 share = markets[market][share_name]  
 
-
+# Eurex symbol (3-4 Chars)
 symbol = sym_repo['reverseid'][share_name]
 #share_name = sym_repo[symbol][0]['sec_name']
 yahoo_symbol = te.get_yahoo_symb(symbol)
@@ -96,7 +96,7 @@ date_len=len(mat_dates)
 nocol,ccol,pcol = st.columns((4,2,2))
 with nocol:
     #st.markdown(f'Rel. Margins at **{next_year_maturity}** ')
-    maturity_select = st.selectbox(f'Rel. Margins at **maturity** ',options=mat_dates,index=6)
+    maturity_select = st.selectbox(f'Rel. Margins at **maturity** ',options=mat_dates,index=9,format_func=te.format_datetime)
     call_price,put_price = market_prices[maturity_select]
 with ccol:
     st.markdown(f'**Call:** {call_price*100:.2f}%')
@@ -107,18 +107,20 @@ with pcol:
 col1,col2,col3=st.columns((2,1,1))
 with col1:
     tol_1 = st.slider('Strike Filter [%]',min_value=1,max_value=99,value=10,step=1,
-                      help='Filter only relevant Strike Values, in [%] around Market Price')
+                      help='Filter Strike Levels in [%] Band around Market Price')
 with col2: 
-    mindate = st.selectbox('Minimum Maturity',mat_dates,index=0)
+    mindate = st.selectbox('Minimum Maturity',mat_dates,index=0,format_func=te.format_datetime)
+    minint = int(mindate.strftime('%Y%m%d'))
 with col3: 
-    maxdate = st.selectbox('Maximum Maturity',mat_dates,index=date_len-1)
+    maxdate = st.selectbox('Maximum Maturity',mat_dates,index=date_len-1,format_func=te.format_datetime)
+    maxint = int(maxdate.strftime('%Y%m%d'))
 
 #option_set = get_optionset(symbol,last_price,tolerance=tol_1/100.)
 
 
 df_tol = te.df_filter_strike(df,last_price,tol_1/100)
 # get margins of option_set
-dff = te.df_filter_date(df_tol,mindate,maxdate).sort_values(by=['contract_date','exercise_price','call_put_flag'])
+dff = te.df_filter_date(df_tol,minint,maxint).sort_values(by=['contract_date','exercise_price','call_put_flag'])
 #dff.style.apply(te.color_CP, column=['call_put_flag'], axis=1)
 
 #dff['ratio']=(dff['premium_margin']/100-dff.exercise_price)/last_price

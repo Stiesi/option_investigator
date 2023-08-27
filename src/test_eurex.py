@@ -30,6 +30,8 @@ api_header = {"X-DBP-APIKEY": eurex_key}
 effective_date = datetime.date.today() + datetime.timedelta(days=2)
 #maturity_date = effective_date.replace(year=effective_date.year+1)
 
+def format_datetime(dt):
+  return dt.strftime('%Y-%m-%d')
 
 def today_nextyear(year=1,month=0):
   # get today + 1 year + month  at int in yyyymm
@@ -52,11 +54,14 @@ def _interp_margin(df,last_price):
 def get_margins_atmarketprice(df,last_price):
   # get percentage of margin in one year at actual price
   # for calls and puts
-  mat_dates = df['maturity'].sort_values().unique()
+  if 'rel_margin' not in df.columns:
+      df['rel_margin']= df.premium_margin/(last_price*100) # contract size 100
+  mat_ints = df['contract_date'].sort_values().unique()
+  mat_dates = [datetime.datetime.strptime(str(m),'%Y%m%d') for m in mat_ints]
   mat_marketprice={}
-  for mdate in mat_dates:  
-    my_c=df[(df['maturity']==mdate)&(df['call_put_flag']=='C')].sort_values(by=['exercise_price'])
-    my_p=df[(df['maturity']==mdate)&(df['call_put_flag']=='P')].sort_values(by=['exercise_price'])
+  for mint,mdate in zip(mat_ints,mat_dates):  
+    my_c=df[(df['contract_date']==mint)&(df['call_put_flag']=='C')].sort_values(by=['exercise_price'])
+    my_p=df[(df['contract_date']==mint)&(df['call_put_flag']=='P')].sort_values(by=['exercise_price'])
     mat_marketprice[mdate]=(_interp_margin(my_c,last_price),_interp_margin(my_p,last_price))
   return mat_marketprice
 
@@ -115,6 +120,20 @@ def markets():
   return repo
 
 def create_repos():
+  '''
+    Create a Repositories of shares based on Markets
+
+    Repo is saved locally as EUREX_DB.json, tries to reopen this file
+
+    Returns:
+    symbols : dict[str,dict]
+              EUREX symbol: info and symbols of share
+              .
+              .
+              .
+              reverseid: name of share: EUREX symbol
+
+  '''
 
   if os.path.exists('EUREX_DB.json'):
     with open('EUREX_DB.json') as fr:
@@ -148,7 +167,24 @@ def create_repos():
   return symbols
 
 
-def get_history(symbol):
+def get_history(symbol:str):
+   '''
+    Call Yahoo Finance to get history (2y) for symbol
+
+    parameter:
+    ----------
+    symbol   str
+    yahoo symbol (e.g. BAS.DE or BAYN.DE)
+
+    Return:
+    ------
+    history dataframe
+    dataframe according to yahoo ticker object returned for symbol
+     additinally created:
+         dates : date from index (oldest first, latest last)
+         reversedates: reverse ordered dates for all rows  (latest first, oldest last)
+         prodates: shifted reversed dates to future from today (looks like history values mirrored at today)
+   '''
    ticker = get_ticker(symbol)
    history=ticker.history(period='2y')
    today = datetime.date.today()
@@ -159,12 +195,22 @@ def get_history(symbol):
    # mirror dates from past to future:
    #   add delta days from reversdates to today
    history['prodates']=(today - history.dates).apply(lambda x: today + x) # shift reversedates to future
-
    return history
 
 
-def get_ticker(symbol):
-    
+def get_ticker(symbol:str):
+    '''
+      call yahoo finance to get history data
+
+      parameter:
+      ----------
+      symbol   str
+      yahoo symbol (e.g. BAS.DE or BAYN.DE)
+
+      return:
+      ticker obj
+      ticker obj from yahoo finance
+    '''
     print(">>", symbol, end=' ... ')
     try:
         ticker = yf.Ticker(symbol)    
@@ -187,12 +233,37 @@ def get_ticker(symbol):
         print('Problem')
     return  ticker
 
+def get_eurex_products_list():
+  '''
+  Function get all european option products from Eurex in terms of Eurex
+
+  Return:
+
+  symbols_eurex list of lists
+   lists of product, prod_name,underlying_isin
+  '''
+
+  products = requests.get(url_base + "products",
+                 params = {'extrafields':'underlying_isin,prod_name,exercise_style_flag'},
+                 headers = api_header).json()
+
+  #dprod = pd.DataFrame(products['products'])  # not needed
+
+  #all symbols in Eurex products
+  symbols_eurex = [[prod['product'],prod['prod_name'],prod['underlying_isin']] for prod in products['products'] if (
+                      prod['instrument_type'] =='option') & (prod['exercise_style_flag']!='E')]
+  #for prod in products['products']:
+  #  if prod['product'] in symbols.keys():
+  #    print(symbols[prod['product']], name_repo[symbols[prod['product']]])
+
+  print(len(symbols_eurex))
+  return symbols_eurex
 
 
 def get_eurex_products(SYMBOLS):
 
   products = requests.get(url_base + "products",
-                 params = {},
+                 params = {'extrafields':'underlying_isin'},
                  headers = api_header).json()
 
   #dprod = pd.DataFrame(products['products'])  # not needed
@@ -322,7 +393,7 @@ if __name__=='__main__':
   # get margins of option_set
   resp = get_portfolio_margins(option_set)
   df = df_from_portfolio(resp)
-  print(df_filter_date(df,202312,202412))
+  print(df_filter_date(df,datetime.datetime.strptime('202312','%Y%m'),datetime.datetime.strptime('202412','%Y%m')))
 ##############
 '''
 Index(['iid', 'product_id', 'contract_date', 'maturity', 'call_put_flag',
