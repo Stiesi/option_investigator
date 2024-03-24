@@ -658,6 +658,7 @@ def create_repos():
   countries = stock_data.get_all_countries()
   indices = stock_data.get_all_indices()
   industries = stock_data.get_all_industries()
+  all = stock_data.get_all_stocks()
 
   ixlist =['DAX','MDAX','AEX','CAC 40','IBEX 35','BEL 20','FTSE 100','SDAX']#,'NASDAQ 100','DOW JONES']
   repo = {}
@@ -665,7 +666,7 @@ def create_repos():
     stocks = stock_data.get_stocks_by_index(market)
     stocklist = [stock for stock in stocks if stock['name'] in eurex_existnames]
     repo[market]=share_repo(stocklist)  
-  
+  repo['all']=share_repo([stock for stock in all if stock['name'] in eurex_existnames])
   return repo
 
 def _get_symbol(entry):

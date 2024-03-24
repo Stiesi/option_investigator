@@ -388,12 +388,12 @@ if __name__=='__main__':
   last_price = history.iloc[-1].Close
 
   # get options of DTE
-  option_set = get_options(symbol,last_price)
+  option_set = get_options(symbol)#‚,last_price)
   
   # get margins of option_set
   resp = get_portfolio_margins(option_set)
   df = df_from_portfolio(resp)
-  print(df_filter_date(df,datetime.datetime.strptime('202312','%Y%m'),datetime.datetime.strptime('202412','%Y%m')))
+  print(df_filter_date(df,datetime.datetime.strptime('202406','%Y%m'),datetime.datetime.strptime('202412','%Y%m')))
 ##############
 '''
 Index(['iid', 'product_id', 'contract_date', 'maturity', 'call_put_flag',
