@@ -660,7 +660,7 @@ def create_repos():
   industries = stock_data.get_all_industries()
   all = stock_data.get_all_stocks()
 
-  ixlist =['DAX','MDAX','AEX','CAC 40','IBEX 35','BEL 20','FTSE 100','SDAX']#,'NASDAQ 100','DOW JONES']
+  ixlist =['DAX','MDAX','AEX','CAC 40','IBEX 35']#,'BEL 20','FTSE 100','SDAX']#,'NASDAQ 100','DOW JONES']
   repo = {}
   for market in ixlist:
     stocks = stock_data.get_stocks_by_index(market)

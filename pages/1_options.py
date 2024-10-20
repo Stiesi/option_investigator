@@ -124,11 +124,17 @@ dff = te.df_filter_date(df_tol,minint,maxint).sort_values(by=['contract_date','e
 #dff.style.apply(te.color_CP, column=['call_put_flag'], axis=1)
 
 #dff['ratio']=(dff['premium_margin']/100-dff.exercise_price)/last_price
-showtable = st.checkbox('Show Table')
+sc1,sc2 = st.columns((3,1))
+with sc2:
+    showtable = st.checkbox('Show Table')
+with sc1:
+    #cpfiltera = st.selectbox('Plot Calls/Puts',['Call','Put'])
+    cpfilter = st.radio('Plot Calls/Puts',['Call','Put'],horizontal=True)
+    
 if showtable:
     st.dataframe(dff[['contract_date','call_put_flag','exercise_price','version_number','component_margin','premium_margin','rel_margin']].style.apply(te.color_CP, column=['call_put_flag'], axis=1),
-             use_container_width=True,             
-             column_config={
+            use_container_width=True,             
+            column_config={
         #"product_id": "Symbol",        
         #"contract_date": st.column_config.NumberColumn(
         #    "Maturity",
@@ -153,7 +159,6 @@ if showtable:
         },
         hide_index=True,        
         )
-cpfilter = st.selectbox('Plot Calls/Puts',['Call','Put'])
 dfplot = df_tol.loc[df_tol['call_put_flag']==cpfilter[0]].sort_values(by=['contract_date','exercise_price'])
 fig_opt = po.plot_margins(dfplot,share_name,last_price)
 st.plotly_chart(fig_opt)
