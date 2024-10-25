@@ -373,7 +373,7 @@ def df_filter_date(df,from_due:int,until_due:int):
   return df.loc[(df['maturity']>=from_due)&(df['maturity']<=until_due)]
 
 # GLOBAL Data
-SYMBOLS = create_repos()  # repo by name, symbols is dict symbol -> name
+#SYMBOLS = create_repos()  # repo by name, symbols is dict symbol -> name
 
 
 if __name__=='__main__':

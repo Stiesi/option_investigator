@@ -1,4 +1,6 @@
 import streamlit as st
+from streamlit_gsheets import GSheetsConnection
+
 from pytickersymbols import PyTickerSymbols
 import numpy as np
 import pandas as pd
@@ -681,3 +683,36 @@ def _get_symbol(entry):
 def share_repo(my_iterator):
   sharedict = {entry['name']: _get_symbol(entry) for entry in my_iterator if (type(entry) is dict) and (entry['symbol'] is not None)}  
   return sharedict
+
+### To be implemented. ###
+
+@st.cache_data(ttl=3600,show_spinner='Read from Google Sheets')
+def read_gsrepos():
+  '''
+  Read table with repo data from Google Sheets
+
+  return as a dict
+  '''
+  conn = st.connection("gsheets", type=GSheetsConnection)
+
+  df = conn.read()
+  df.set_index('sec_id',inplace=True)
+  #del df['unnamed 0']
+  #return df.to_dict(orient='index')
+  return df
+
+@st.cache_data(ttl=3600)
+def db_name2id(dd):
+  '''
+  create reversed association of share_id (here names) to eurex_ticker
+  '''
+  return {v['_id']:k for k,v in dd.items()}
+  #return {row._id:row.sec_id for row in df.rows}
+
+def get_db():
+   repo = read_gsrepos()
+   repo['reverseid']=db_name2id(repo)
+   return repo
+
+def get_markets():
+   return ['DAX','MDAX','AEX','CAC 40','IBEX 35']

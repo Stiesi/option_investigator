@@ -4,9 +4,11 @@ import streamlit as st
 
 #os.environ["eurex_margins"] = st.secrets['eurex_margins']
 import src.test_eurex as te
+import option.option as opt
 import src.plot_options as po
 
-sym_repo = te.SYMBOLS
+#sym_repo = te.SYMBOLS
+my_db = opt.read_gsrepos() # dataframe with stock data
 
 #@st.cache_data
 #def get_shares():
@@ -33,7 +35,8 @@ def get_margins(option_set):
 
 @st.cache_data
 def get_markets():
-    return te.markets()
+    #return te.markets()
+    return opt.get_markets()
 
 @st.cache_data
 def convert_df(df):
@@ -41,22 +44,27 @@ def convert_df(df):
     return df.to_csv().encode('utf-8')
 
 
-st.set_page_config(page_title="Option Investigator",    
-                )
+#st.set_page_config(page_title="Option Investigator",    
+#                )
 
 
 st.header('Eurex Option Margin Viewer')
 #sym_repo  = get_shares()
 markets = get_markets()
-market = st.sidebar.selectbox('Market',options=markets.keys(),index=0)
-share_name = st.sidebar.selectbox('Share',options=(markets[market]).keys(),index=0) # shares of market
+market_key = st.sidebar.selectbox('Market',options=markets,index=0)
+share_df = my_db[my_db[market_key]==1]
+share_name = st.sidebar.selectbox('Share',options=share_df['_id'],index=0) # shares of market
+srow = my_db
+srow1 = my_db[my_db['_id']==share_name]
 
-share = markets[market][share_name]  
+#share = markets[market][share_name]  
 
 # Eurex symbol (3-4 Chars)
-symbol = sym_repo['reverseid'][share_name]
+#symbol = sym_repo['reverseid'][share_name]
+symbol = srow['symbol'].values[0]
 #share_name = sym_repo[symbol][0]['sec_name']
-yahoo_symbol = te.get_yahoo_symb(symbol)
+#yahoo_symbol = te.get_yahoo_symb(symbol)
+yahoo_symbol = srow['yahoo'].values[0]
 
 history = te.get_history(yahoo_symbol)
 last_price = history.iloc[-1].Close

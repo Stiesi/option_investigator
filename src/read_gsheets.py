@@ -7,7 +7,7 @@ import pandas as pd
 import test_eurex as te
 
 # Create a connection object.
-if 0:
+if 1:
     conn = st.connection("gsheets", type=GSheetsConnection)
 
     df = conn.read()
@@ -24,6 +24,7 @@ if 0:
     # Print results.
     for row in df.itertuples():
         st.write(f"{row.sec_name} find at {row.yahoo}:")
+    
 else:
     with open("Eurex_db.json") as fe:
         data = json.load(fe)
