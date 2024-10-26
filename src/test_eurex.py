@@ -339,14 +339,17 @@ def get_portfolio_margins(list_of_products,line_nos=[]):
     return None
 
 def df_from_portfolio(resp):
-  p_drill = pd.DataFrame(resp['drilldowns']).set_index('line_no').astype(dict(contract_date=int,maturity=int,exercise_price=float))  
-  return p_drill[['product_id', 'contract_date', 'maturity', 'call_put_flag',
+  try:
+    p_drill = pd.DataFrame(resp['drilldowns']).set_index('line_no').astype(dict(contract_date=int,maturity=int,exercise_price=float))  
+    return p_drill[['product_id', 'contract_date', 'maturity', 'call_put_flag',
        'exercise_price', 'version_number', 'net_ls_balance',
        'component_margin',
        #'component_margin_currency',
        'premium_margin',  # thats it!!
        #'premium_margin_currency'
        ]]  # dataframe with 
+  except:
+    return None
 
 def get_option_experation(df):
   # df is DataFrame from portfolio

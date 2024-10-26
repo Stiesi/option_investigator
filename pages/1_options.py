@@ -71,6 +71,9 @@ last_price = history.iloc[-1].Close
 last_date = history.iloc[-1].dates
 #st.markdown(f'Last Price:   **:blue[{last_price:.2f}]**')
 option_set = get_optionset(symbol)
+if len(option_set)==0:
+    st.warning(f"{symbol} not in eurex")
+
 
 head1,head2, head3 = st.columns((1,4,1))
 try:

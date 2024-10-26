@@ -55,7 +55,7 @@ def main():
     
     # Eurex symbol (3-4 Chars)
     #symbol1 = te.SYMBOLS['reverseid'][sharename1]
-    symbol1 = srow1['symbol'].values[0]
+    symbol1 = srow1.index.values[0]
     #share_name = sym_repo[symbol][0]['sec_name']
     #symbolyahoo1 = te.get_yahoo_symb(symbol1)
     symbolyahoo1 = srow1['yahoo'].values[0]
@@ -74,7 +74,7 @@ def main():
     # Eurex symbol (3-4 Chars)
     #symbol2 = te.SYMBOLS['reverseid'][sharename2]
     #symbol2 = my_db['reverseid'][sharename2]    
-    symbol2 = srow2['symbol'].values[0]
+    symbol2 = srow2.index.values[0]
     #share_name = sym_repo[symbol][0]['sec_name']
     symbolyahoo2 = srow2['yahoo'].values[0]
 
@@ -93,16 +93,22 @@ def main():
     ######################
     if 1:      
       option_set1 = get_optionset(symbol1)
-      df1 = get_margins(option_set1)  
-      # dict with maturity : (call margin %, put margin %)
-      market_prices1 = optex.get_margins_atmarketprice(df1,lastprice1) 
-      mat_dates = market_prices1.keys()
+      if len(option_set1)==0:
+        st.warning(f"{symbol1} not in eurex")
+      else:
+        df1 = get_margins(option_set1)  
+        # dict with maturity : (call margin %, put margin %)
+        market_prices1 = optex.get_margins_atmarketprice(df1,lastprice1) 
+        mat_dates = market_prices1.keys()
 
-      #date_len=len(mat_dates)
+      #date_len=len(mat_dates)      
       option_set2 = get_optionset(symbol2)
-      df2 = get_margins(option_set2)  
-      # dict with maturity : (call margin %, put margin %)
-      market_prices2 = optex.get_margins_atmarketprice(df2,lastprice2) 
+      if len(option_set2)==0:
+        st.warning(f"{symbol2} not in eurex")
+      else:
+        df2 = get_margins(option_set2)  
+        # dict with maturity : (call margin %, put margin %)
+        market_prices2 = optex.get_margins_atmarketprice(df2,lastprice2) 
 
       # PLOT these market prices
       fig = opt.plot_shares_2(sharename1,future1,sharename2,future2,market_prices1,market_prices2)
