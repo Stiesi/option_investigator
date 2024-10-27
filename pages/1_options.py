@@ -54,14 +54,14 @@ markets = get_markets()
 market_key = st.sidebar.selectbox('Market',options=markets,index=0)
 share_df = my_db[my_db[market_key]==1]
 share_name = st.sidebar.selectbox('Share',options=share_df['_id'],index=0) # shares of market
-srow = my_db
-srow1 = my_db[my_db['_id']==share_name]
+#srow = my_db
+srow = my_db[my_db['_id']==share_name]
 
 #share = markets[market][share_name]  
 
 # Eurex symbol (3-4 Chars)
 #symbol = sym_repo['reverseid'][share_name]
-symbol = srow['symbol'].values[0]
+symbol = srow.index.values[0]
 #share_name = sym_repo[symbol][0]['sec_name']
 #yahoo_symbol = te.get_yahoo_symb(symbol)
 yahoo_symbol = srow['yahoo'].values[0]

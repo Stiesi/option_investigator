@@ -398,8 +398,8 @@ def plot_shares(sharename,future,sharename2,future2):
     fig = make_subplots(specs=[[{"secondary_y": True}]])
     fig.add_trace(go.Scatter(x=future.index,
                     y=future['close_percent'], 
-                    text=future2['Close'] ,
-                    customdata=future2['dates'].values,
+                    text=future['Close'] ,
+                    customdata=future['dates'].values,
                     hovertemplate = 'Price: %{text:.2f}<br>Date: %{customdata}',#<extra>%{sharename2}</extra>                    
                     mode='lines',
                     line=dict(color='lightblue') ,
