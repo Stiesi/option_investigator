@@ -696,9 +696,10 @@ def read_gsrepos():
   conn = st.connection("gsheets", type=GSheetsConnection)
 
   df = conn.read()
-  df.set_index('sec_id',inplace=True)
+  #df.set_index('sec_id',inplace=True)
   #del df['unnamed 0']
   #return df.to_dict(orient='index')
+  df.dropna(inplace=True) # remove lines with no entries
   return df
 
 @st.cache_data(ttl=3600)
@@ -715,4 +716,4 @@ def get_db():
    return repo
 
 def get_markets():
-   return ['DAX','MDAX','AEX','CAC 40','IBEX 35']
+   return ['DAX','MDAX','AEX','CAC 40','FTSE 100']

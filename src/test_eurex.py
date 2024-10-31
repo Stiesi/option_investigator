@@ -313,6 +313,7 @@ def get_options(symbol):
               call_put_flag=x['call_put_flag'],              
               )
             for x in series['list_series']
+              if x['version_number']=='0' # problems with VOW
             ]
   return options
 

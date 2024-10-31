@@ -61,7 +61,8 @@ srow = my_db[my_db['_id']==share_name]
 
 # Eurex symbol (3-4 Chars)
 #symbol = sym_repo['reverseid'][share_name]
-symbol = srow.index.values[0]
+#symbol = srow.index.values[0]
+symbol = srow['sec_id'].values[0]
 #share_name = sym_repo[symbol][0]['sec_name']
 #yahoo_symbol = te.get_yahoo_symb(symbol)
 yahoo_symbol = srow['yahoo'].values[0]

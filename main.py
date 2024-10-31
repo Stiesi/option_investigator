@@ -55,7 +55,8 @@ def main():
     
     # Eurex symbol (3-4 Chars)
     #symbol1 = te.SYMBOLS['reverseid'][sharename1]
-    symbol1 = srow1.index.values[0]
+    #symbol1 = srow1.index.values[0]
+    symbol1 = srow1.sec_id.values[0]
     #share_name = sym_repo[symbol][0]['sec_name']
     #symbolyahoo1 = te.get_yahoo_symb(symbol1)
     symbolyahoo1 = srow1['yahoo'].values[0]
@@ -74,7 +75,8 @@ def main():
     # Eurex symbol (3-4 Chars)
     #symbol2 = te.SYMBOLS['reverseid'][sharename2]
     #symbol2 = my_db['reverseid'][sharename2]    
-    symbol2 = srow2.index.values[0]
+    #symbol2 = srow2.index.values[0]
+    symbol2 = srow2.sec_id.values[0]
     #share_name = sym_repo[symbol][0]['sec_name']
     symbolyahoo2 = srow2['yahoo'].values[0]
 
