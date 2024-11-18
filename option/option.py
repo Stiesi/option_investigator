@@ -197,14 +197,20 @@ def get_ticker(symbol):
 def get_current_rent(symbol):
     ticker = yf.Ticker(symbol)
     todays_data = ticker.history(period='2y')
-    print(todays_data.keys())
-    dividends = ticker.dividends
-    ydiv = pd.DataFrame(dividends)
-    div=ydiv.groupby(lambda x: x.year)['Dividends'].sum()
-    if len(div)>0:
-      lastdiv = div.max()
-      lastdiv = div.iloc[-1]
-    else:
+    #print(todays_data.keys())
+    #st.write(symbol)
+    try:
+      dividends = ticker.dividends
+
+      if len(dividends)>0:
+        ydiv = pd.DataFrame(dividends)
+        div=ydiv.groupby(lambda x: x.year)['Dividends'].sum()
+        lastdiv = div.max() # at max index ?
+        #lastdiv = div.iloc[-1]
+      else:
+        lastdiv=0
+    except:
+      
       lastdiv=0
     try:
       tname=ticker.info['longName']
@@ -717,3 +723,19 @@ def get_db():
 
 def get_markets():
    return ['DAX','MDAX','AEX','CAC 40','FTSE 100']
+
+@st.cache_data(ttl=3600,show_spinner='Read from Google Sheets')
+def read_gs_all_shares():
+  '''
+  Read table with repo data from Google Sheets
+
+  return as a df
+  '''
+  conn = st.connection("gs_all", type=GSheetsConnection)
+
+  df = conn.read()
+  #df.set_index('sec_id',inplace=True)
+  #del df['unnamed 0']
+  #return df.to_dict(orient='index')
+  #df.dropna(inplace=True) # remove lines with no entries
+  return df
