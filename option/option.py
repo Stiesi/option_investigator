@@ -158,14 +158,15 @@ def find_future_duedates(future):
 def get_history(symbol):
    ticker = get_ticker(symbol)
    history=ticker.history(period='2y')
-   today = datetime.date.today()
-   history['dates']=history.index.date
-   history.index=history.dates
-   #history.reindex()
-   history['reversedates']= history.dates.values[::-1]
-   # mirror dates from past to future:
-   #   add delta days from reversdates to today
-   history['prodates']=(today - history.dates).apply(lambda x: today + x) # shift reversedates to future
+   if not history.empty:
+    today = datetime.date.today()
+    history['dates']=history.index.date
+    history.index=history.dates
+    #history.reindex()
+    history['reversedates']= history.dates.values[::-1]
+    # mirror dates from past to future:
+    #   add delta days from reversdates to today
+    history['prodates']=(today - history.dates).apply(lambda x: today + x) # shift reversedates to future
 
    return history
 
@@ -722,7 +723,7 @@ def get_db():
    return repo
 
 def get_markets():
-   return ['DAX','MDAX','AEX','CAC 40','FTSE 100']
+   return ['DAX','MDAX','AEX','CAC 40','FTSE 100']#,'IBEX 35']
 
 @st.cache_data(ttl=3600,show_spinner='Read from Google Sheets')
 def read_gs_all_shares():
