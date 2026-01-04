@@ -141,3 +141,6 @@ if __name__ == '__main__':
             if result['price']:
                 print(f"  Preis: {result['price']:.2f}")
 
+
+
+
