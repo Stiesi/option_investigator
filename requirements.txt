@@ -4,3 +4,7 @@ pandas
 plotly
 yfinance
 pytickersymbols
+scipy
+pydantic
+#deta==1.2.0
+st-gsheets-connection

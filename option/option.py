@@ -1,4 +1,6 @@
 import streamlit as st
+from streamlit_gsheets import GSheetsConnection
+
 from pytickersymbols import PyTickerSymbols
 import numpy as np
 import pandas as pd
@@ -33,7 +35,7 @@ def get_option_expiration(refdate):
             dt = datetime.datetime.strptime(refdate, '%Y-%m-%d')
     else:
         dt=refdate
-    option_expiration=dt + relativedelta(day=1, weekday=FR(3))
+    option_expiration=dt + relativedelta(day=1, weekday=FR(3)) # 3rd Friday
     if option_expiration < dt:
         option_expiration=option_expiration + relativedelta(months=+1,day=1, weekday=FR(3))
     return option_expiration
@@ -53,6 +55,7 @@ def option_periods(refdate, quarters=8):
     
     returns:
         pandas DataFrame with option names and list of dates
+    '''
     '''
     if isinstance(refdate, str):    
         dt = datetime.datetime.strptime(refdate, '%Y-%m-%d')
@@ -81,10 +84,37 @@ def option_periods(refdate, quarters=8):
         name = q1.strftime('%Y/%m')
         list_names.append(name)
         list_dates.append(q1)
+    '''
+    # new and shorter
+    list_dates = _duedates(refdate)
+    list_names = [q1.strftime('%Y/%m') for q1 in list_dates]
 
     df=pd.DataFrame({'shortcut':list_names,'duedate':list_dates})
     return df
 
+def _duedates(refdate):
+    dq={'q1':[(6,0),(9,0),(12,0),(6,1),(12,1),(6,2),(12,2),(12,3),(12,4)],
+        'q2':[(9,0),(12,0),(3,1),(6,1),(12,1),(6,2),(12,2),(12,3),(12,4)],
+        'q3':[(12,0),(3,1),(6,1),(9,1),(12,1),(6,2),(12,2),(12,3),(12,4)],
+        'q4':[(3,1),(6,1),(9,1),(12,1),(6,2),(12,2),(6,3),(12,3),(12,4)]
+        }
+    if isinstance(refdate, str):    
+        dt = datetime.datetime.strptime(refdate, '%Y-%m-%d')
+    else:
+        dt=refdate
+    nextdue = get_option_expiration(dt)
+    if dt.month < nextdue.month: # day is after due in actual month
+        dt = dt.replace(day=1)+relativedelta(months=1) #  1st of next month
+        
+    
+    # first 3 months
+    ddates=[get_option_expiration(dt+relativedelta(months=+month)) for month in range(3)]
+    quarter = (dt.month-1)//3 +1
+    qstr = f'q{quarter}'
+    for (mon,dyear) in dq[qstr]:
+        dateq = datetime.datetime(day=1,month=mon,year=dt.year)+relativedelta(years=dyear)
+        ddates.append(get_option_expiration(dateq).date()) # make time obj to date obj
+    return ddates
 
 @st.cache_data
 def tickerfilters():
@@ -110,26 +140,33 @@ def create_future(data):
 
 def find_future_duedates(future):
     # duedates of option need not to have a date entry in data (future)
+    # die nächsten drei Monate
+    #  +1 innerhalb des nächsten Jahres alle quartale
+    #  +2 im Folgejahr die Halbjahre
+    #  +3 und 4 die 12/0003 und 12/0004
     
     opdates = option_periods(future.index.min(),quarters=8)
     # find closest day (index)
     # all indices close to due dates
-    ixdd = [abs((ddate-future.index)).days.argmin() for ddate in opdates['duedate']]
-    return future.iloc[ixdd].index
+    #ixdd = [abs((ddate-future.index).days).argmin() for ddate in opdates['duedate']]
+    ixdd = [abs((ddate-future.index)).argmin() for ddate in opdates['duedate']]
+    #ixdd = [min(ixi+1,len(future)-1) for ixi in ixdd]
+    return future.iloc[ixdd].index # due dates are clos, but not exact!, since projection of historical data to future, reflection may lay on weekends
 
 
 
 def get_history(symbol):
    ticker = get_ticker(symbol)
    history=ticker.history(period='2y')
-   today = datetime.date.today()
-   history['dates']=history.index.date
-   history.index=history.dates
-   #history.reindex()
-   history['reversedates']= history.dates.values[::-1]
-   # mirror dates from past to future:
-   #   add delta days from reversdates to today
-   history['prodates']=(today - history.dates).apply(lambda x: today + x) # shift reversedates to future
+   if not history.empty:
+    today = datetime.date.today()
+    history['dates']=history.index.date
+    history.index=history.dates
+    #history.reindex()
+    history['reversedates']= history.dates.values[::-1]
+    # mirror dates from past to future:
+    #   add delta days from reversdates to today
+    history['prodates']=(today - history.dates).apply(lambda x: today + x) # shift reversedates to future
 
    return history
 
@@ -161,14 +198,20 @@ def get_ticker(symbol):
 def get_current_rent(symbol):
     ticker = yf.Ticker(symbol)
     todays_data = ticker.history(period='2y')
-    print(todays_data.keys())
-    dividends = ticker.dividends
-    ydiv = pd.DataFrame(dividends)
-    div=ydiv.groupby(lambda x: x.year)['Dividends'].sum()
-    if len(div)>0:
-      lastdiv = div.max()
-      lastdiv = div.iloc[-1]
-    else:
+    #print(todays_data.keys())
+    #st.write(symbol)
+    try:
+      dividends = ticker.dividends
+
+      if len(dividends)>0:
+        ydiv = pd.DataFrame(dividends)
+        div=ydiv.groupby(lambda x: x.year)['Dividends'].sum()
+        lastdiv = div.max() # at max index ?
+        #lastdiv = div.iloc[-1]
+      else:
+        lastdiv=0
+    except:
+      
       lastdiv=0
     try:
       tname=ticker.info['longName']
@@ -250,9 +293,109 @@ def cumstd(series):
    # needs minimum 5 numbers
    nrmin=5
    myvals = series.pct_change()
-   data = [myvals.iloc[:i].std() for i in range(nrmin,len(series))]
+   #myvals = series
+   data = [myvals.iloc[:i].std() for i in range(nrmin,len(myvals))]
    # add first value for first 2 entries
    return np.array([data[0]]*nrmin+data)*(252**0.5)
+
+def colorsets(share_no,plotid,opacity):
+    # return colorstring dep on share and plotid
+    colors = [['95,182,217','95,182,217','95,182,217','95,197,217'],
+              ['235,28,35','199,38,43','214,82,79','235,115,113']
+              ]
+    return f'rgba({colors[share_no][plotid]},{opacity})'
+      
+
+def _plot_area(fig,df_a,sharename,share_id):
+    fig.add_trace(go.Scatter(
+        x=df_a.index,
+        y=(1-df_a.call)*100,
+        mode='markers+lines',
+        fill=None,
+        line=dict(color=colorsets(share_id,2,1),dash='dash'),
+        showlegend=False,
+        legendgroup=sharename,   
+        name='+Calls@market'),
+        secondary_y=False,
+    )
+    fig.add_trace(go.Scatter(
+        x=df_a.index,
+        y=(1+df_a.call)*100,
+        mode='markers+lines',
+        line=dict(color=colorsets(share_id,2,1),dash='dash'),
+        fill='tonexty',
+        fillcolor = colorsets(share_id,2,0.1),#'lightblue',
+        #opacity=0.1,     
+        legendgroup=sharename,   
+        name='-Calls@market'),
+        secondary_y=False,
+    )
+    # Puts
+    fig.add_trace(go.Scatter(
+        x=df_a.index,
+        y=(1-df_a.put)*100,
+        mode='markers+lines',
+        fill=None,
+        line=dict(color=colorsets(share_id,3,1)),
+        legendgroup=sharename,   
+        showlegend=False,
+        name='+Puts@market'),
+        secondary_y=False,
+    )
+    fig.add_trace(go.Scatter(
+        x=df_a.index,
+        y=(1+df_a.put)*100,
+        mode='markers+lines',
+        line=dict(color=colorsets(share_id,3,1)),
+        fill='tonexty',
+        fillcolor = colorsets(share_id,3,0.1),
+        #opacity=0.1,        
+        legendgroup=sharename,   
+        name='-Puts@market'),
+        secondary_y=False,
+    )
+    return fig
+   
+
+def plot_shares_2(sharename,future,sharename2,future2,agio1,agio2):
+    # extend plotting to time agio (volatility)
+    # extra lines
+    df_all1=pd.DataFrame.from_dict(agio1,orient='index',columns=['call','put'])
+    df_all2=pd.DataFrame.from_dict(agio2,orient='index',columns=['call','put'])
+    # 2 years plot
+    lastdate = datetime.datetime.now() + datetime.timedelta(days=2.5*365)    
+    df_a1=df_all1[df_all1.index< lastdate]
+    df_a2=df_all2[df_all2.index< lastdate]
+    fig = plot_shares(sharename,future,sharename2,future2)
+    # call a1
+    fig = _plot_area(fig,df_a1,sharename,0)
+    fig = _plot_area(fig,df_a2,sharename2,1)
+
+    # fig.add_trace(go.Scatter(
+    #     x=df_a2.index,
+    #     y=(1+df_a2.call)*100,
+    #     mode='markers+lines',
+    #     line=dict(color='red'),
+    #     name=f'Calls@market {sharename2[:5]}'),
+    #     secondary_y=False,
+    # )
+    # fig.add_trace(go.Scatter(
+    #     x=df_a1.index,
+    #     y=(1+df_a1.put)*100,
+    #     mode='markers+lines',
+    #     line=dict(color='steelblue'),
+    #     name=f'Putss@market {sharename[:5]}'),
+    #     secondary_y=False,
+    # )
+    # fig.add_trace(go.Scatter(
+    #     x=df_a2.index,
+    #     y=(1+df_a2.put)*100,
+    #     mode='markers+lines',
+    #     line=dict(color='pink'),        
+    #     name=f'Puts@market {sharename2[:5]}'),
+    #     secondary_y=False,
+    # )
+    return fig
 
 
 
@@ -262,26 +405,30 @@ def plot_shares(sharename,future,sharename2,future2):
     fig = make_subplots(specs=[[{"secondary_y": True}]])
     fig.add_trace(go.Scatter(x=future.index,
                     y=future['close_percent'], 
-                    text=future2['Close'] ,
-                    customdata=future2['dates'].values,
+                    text=future['Close'] ,
+                    customdata=future['dates'].values,
                     hovertemplate = 'Price: %{text:.2f}<br>Date: %{customdata}',#<extra>%{sharename2}</extra>                    
                     mode='lines',
                     line=dict(color='lightblue') ,
-                    name=sharename),
+                    legendgroup=sharename,   
+                    legendgrouptitle=dict(text=sharename),
+                    name='Close %'),
                   secondary_y=False,) 
     fig.add_trace(go.Scatter(x=future.index,
-                    y=future['vola'], 
+                    y=100+future['vola'], 
                     #yaxis='y2',
                     mode='lines',
+                    legendgroup=sharename,   
                     line=dict(color='steelblue') ,
-                    name=f'{sharename[:5]}.. Volatility'),
-                  secondary_y=True)     
-    fig.add_trace(go.Scatter(x=ixdd,y=future.loc[ixdd]['vola'],
+                    name='Volatility'),
+                  secondary_y=False)     
+    fig.add_trace(go.Scatter(x=ixdd,y=(100+future.loc[ixdd]['vola']),
                              mode='markers',
                              name='DueDates',
+                             legendgroup=sharename,   
                              marker=dict(size=15,symbol='diamond',color='steelblue',
                                          line=dict(width=2, color="DarkSlateGrey"))),
-                             secondary_y=True)
+                             secondary_y=False)
     
     ############# second  ###
     fig.add_trace(go.Scatter(x=future2.index,
@@ -290,26 +437,31 @@ def plot_shares(sharename,future,sharename2,future2):
                     customdata=future2['dates'].values,
                     hovertemplate = 'Price: %{text:.2f}<br>Date: %{customdata}',#<extra>%{sharename2}</extra>
                     mode='lines',
+                    legendgrouptitle=dict(text=sharename2),
+                    legendgroup=sharename2,   
                     line=dict(color='pink') ,
-                    name=sharename2),
+                    name='Close %'),
                   secondary_y=False,) 
     fig.add_trace(go.Scatter(x=future2.index,
-                    y=future2['vola'],                    
+                    y=(100+future2['vola']), 
                     #yaxis='y2',
                     mode='lines',
                     line=dict(color='red') ,
-                    name=f'{sharename2[:5]}.. Volatility'),
-                  secondary_y=True)     
-    fig.add_trace(go.Scatter(x=ixdd,y=future2.loc[ixdd]['vola'],
+                    legendgroup=sharename2,  
+                    name='Volatility'),
+                  secondary_y=False)     
+    fig.add_trace(go.Scatter(x=ixdd,y=100+future2.loc[ixdd]['vola'],
                              mode='markers',
-                             name=f'{sharename2[:5]} DueDates',
+                             legendgroup=sharename2,   
+                
+                             name='DueDates',
                              marker=dict(size=15,symbol='circle',color='red',
                                          line=dict(width=2, color="DarkSlateGrey"))),
-                             secondary_y=True)
+                             secondary_y=False)
     fig.update_layout(
           #xaxis=dict(type='log'),
           yaxis=dict(side='left',title='relative Share Price in %'),
-          yaxis2=dict(side='right',title=f'Volatility in %'),
+          #yaxis2=dict(side='right',title=f'Volatility in %'),
           #legend = dict(orientation = 'h', xanchor = "center", x = 0.5, y= 1)
           )
     fig.update_layout(title='Volatility Review for %s: %.2f  and  %s: %.2f'%(sharename,
@@ -376,6 +528,7 @@ def plot_share_histogram(share_name,data,tildate,volatility=0):
     #https://stackoverflow.com/questions/43284304/how-to-compute-volatility-standard-deviation-in-rolling-window-in-pandas
     # window
     y_vola=y.pct_change().rolling(ldays).std()*(252**0.5)
+    #y_vola=y.rolling(ldays).std()*(252**0.5)
     
     #if volatility==0:        
     volatility_jj=y_vola.loc[data.revDate==due_date].values[0]
@@ -507,18 +660,22 @@ def plot_share_histogram(share_name,data,tildate,volatility=0):
     
 @st.cache_data
 def create_repos():
+  import src.test_eurex as te
+  # only use stock that exist in EUREX
+  eurex_existnames = list(te.SYMBOLS['reverseid'].keys())
   stock_data = PyTickerSymbols()
   countries = stock_data.get_all_countries()
   indices = stock_data.get_all_indices()
   industries = stock_data.get_all_industries()
+  all = stock_data.get_all_stocks()
 
-  ixlist =['DAX','MDAX','AEX','CAC 40','IBEX 35','BEL 20','FTSE 100','SDAX']#,'NASDAQ 100','DOW JONES']
+  ixlist =['DAX','MDAX','AEX','CAC 40','IBEX 35']#,'BEL 20','FTSE 100','SDAX']#,'NASDAQ 100','DOW JONES']
   repo = {}
   for market in ixlist:
     stocks = stock_data.get_stocks_by_index(market)
-    stocklist = [stock for stock in stocks]
+    stocklist = [stock for stock in stocks if stock['name'] in eurex_existnames]
     repo[market]=share_repo(stocklist)  
-  
+  repo['all']=share_repo([stock for stock in all if stock['name'] in eurex_existnames])
   return repo
 
 def _get_symbol(entry):
@@ -533,3 +690,53 @@ def _get_symbol(entry):
 def share_repo(my_iterator):
   sharedict = {entry['name']: _get_symbol(entry) for entry in my_iterator if (type(entry) is dict) and (entry['symbol'] is not None)}  
   return sharedict
+
+### To be implemented. ###
+
+@st.cache_data(ttl=3600,show_spinner='Read from Google Sheets')
+def read_gsrepos():
+  '''
+  Read table with repo data from Google Sheets
+
+  return as a dict
+  '''
+  conn = st.connection("gsheets", type=GSheetsConnection)
+
+  df = conn.read()
+  #df.set_index('sec_id',inplace=True)
+  #del df['unnamed 0']
+  #return df.to_dict(orient='index')
+  df.dropna(inplace=True) # remove lines with no entries
+  return df
+
+@st.cache_data(ttl=3600)
+def db_name2id(dd):
+  '''
+  create reversed association of share_id (here names) to eurex_ticker
+  '''
+  return {v['_id']:k for k,v in dd.items()}
+  #return {row._id:row.sec_id for row in df.rows}
+
+def get_db():
+   repo = read_gsrepos()
+   repo['reverseid']=db_name2id(repo)
+   return repo
+
+def get_markets():
+   return ['DAX','MDAX','AEX','CAC 40','FTSE 100']#,'IBEX 35']
+
+@st.cache_data(ttl=3600,show_spinner='Read from Google Sheets')
+def read_gs_all_shares():
+  '''
+  Read table with repo data from Google Sheets
+
+  return as a df
+  '''
+  conn = st.connection("gs_all", type=GSheetsConnection)
+
+  df = conn.read()
+  #df.set_index('sec_id',inplace=True)
+  #del df['unnamed 0']
+  #return df.to_dict(orient='index')
+  #df.dropna(inplace=True) # remove lines with no entries
+  return df

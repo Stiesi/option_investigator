@@ -1,0 +1,182 @@
+import streamlit as st
+#import os
+
+
+#os.environ["eurex_margins"] = st.secrets['eurex_margins']
+import src.test_eurex as te
+import option.option as opt
+import src.plot_options as po
+
+#sym_repo = te.SYMBOLS
+my_db = opt.read_gsrepos() # dataframe with stock data
+
+#@st.cache_data
+#def get_shares():
+#    SYMBOLS=te.create_repos()  # names from pyticker, 2 dicts
+#    #sym_eurex = te.get_eurex_products(SYMBOLS) # names from eurex (should be subset of pyticker) one list
+#    #SYM_EUREX = {sym: SYMBOLS[sym] for sym in sym_eurex if sym in SYMBOLS.keys()}
+#    
+#    #name_eurex = {name:NAME_REPO[name] for key,name in SYM_EUREX.items() }
+#    return SYMBOLS
+
+@st.cache_data
+def get_optionset(symbol):
+    return te.get_options(symbol)
+
+@st.cache_data(ttl=600,show_spinner='Getting History from yahoo')
+def get_history(symbol):
+    return te.get_history(symbol)
+
+@st.cache_data(ttl=120,show_spinner='Fetch Data from Eurex')
+def get_margins(option_set):
+    resp =te.get_portfolio_margins(option_set)
+    df = te.df_from_portfolio(resp)
+    return df
+
+@st.cache_data
+def get_markets():
+    #return te.markets()
+    return opt.get_markets()
+
+@st.cache_data
+def convert_df(df):
+    # IMPORTANT: Cache the conversion to prevent computation on every rerun
+    return df.to_csv().encode('utf-8')
+
+
+#st.set_page_config(page_title="Option Investigator",    
+#                )
+
+
+st.header('Eurex Option Margin Viewer')
+#sym_repo  = get_shares()
+markets = get_markets()
+market_key = st.sidebar.selectbox('Market',options=markets,index=0)
+share_df = my_db[my_db[market_key]==1]
+share_name = st.sidebar.selectbox('Share',options=share_df['_id'],index=0) # shares of market
+#srow = my_db
+srow = my_db[my_db['_id']==share_name]
+
+#share = markets[market][share_name]  
+
+# Eurex symbol (3-4 Chars)
+#symbol = sym_repo['reverseid'][share_name]
+#symbol = srow.index.values[0]
+symbol = srow['sec_id'].values[0]
+#share_name = sym_repo[symbol][0]['sec_name']
+#yahoo_symbol = te.get_yahoo_symb(symbol)
+yahoo_symbol = srow['yahoo'].values[0]
+
+history = te.get_history(yahoo_symbol)
+last_price = history.iloc[-1].Close
+last_date = history.iloc[-1].dates
+#st.markdown(f'Last Price:   **:blue[{last_price:.2f}]**')
+option_set = get_optionset(symbol)
+if len(option_set)==0:
+    st.warning(f"{symbol} not in eurex")
+
+
+head1,head2, head3 = st.columns((1,4,1))
+try:
+    #st.write(share_name)
+    with head1:
+        if option_set[0]["live"]:
+            st.markdown(f'Eurex: **:green[{symbol}]**  **:blue[{last_date}]**')
+        else:
+            st.markdown(f'Eurex: **:red[{symbol}]**  **:blue[{last_date}]**')
+    with head2:
+        st.markdown(f'**:green[{share_name}]**')
+    with head3:
+        st.markdown(f' Xetra: **:blue[{yahoo_symbol}]** : **:blue[{last_price:.2f}] €** ')
+except:
+    st.write('something went wrong...')
+
+
+df = get_margins(option_set)  
+# dict with maturity : (call margin %, put margin %)
+df['rel_strike']= df.exercise_price/last_price
+df['rel_margin']= df.premium_margin/(last_price*100) # contract size 100
+df['deviation'] = abs(df['rel_strike']-1.)
+market_prices = te.get_margins_atmarketprice(df,last_price) 
+mat_dates = market_prices.keys()
+
+date_len=len(mat_dates)
+
+
+#closest maturity next year
+#next_year_maturity, one_year_margin_calls,one_year_margin_puts = te.get_yearpoint(df,last_price)
+nocol,ccol,pcol = st.columns((4,2,2))
+with nocol:
+    #st.markdown(f'Rel. Margins at **{next_year_maturity}** ')
+    maturity_select = st.selectbox(f'Rel. Margins at **maturity** ',options=mat_dates,index=9,format_func=te.format_datetime)
+    call_price,put_price = market_prices[maturity_select]
+with ccol:
+    st.markdown(f'**Call:** {call_price*100:.2f}%')
+with pcol:
+    st.markdown(f'**Put:** {put_price*100:.2f}%')
+
+
+col1,col2,col3=st.columns((2,1,1))
+with col1:
+    tol_1 = st.slider('Strike Filter [%]',min_value=1,max_value=99,value=10,step=1,
+                      help='Filter Strike Levels in [%] Band around Market Price')
+with col2: 
+    mindate = st.selectbox('Minimum Maturity',mat_dates,index=0,format_func=te.format_datetime)
+    minint = int(mindate.strftime('%Y%m%d'))
+with col3: 
+    maxdate = st.selectbox('Maximum Maturity',mat_dates,index=date_len-1,format_func=te.format_datetime)
+    maxint = int(maxdate.strftime('%Y%m%d'))
+
+#option_set = get_optionset(symbol,last_price,tolerance=tol_1/100.)
+
+
+df_tol = te.df_filter_strike(df,last_price,tol_1/100)
+# get margins of option_set
+dff = te.df_filter_date(df_tol,minint,maxint).sort_values(by=['contract_date','exercise_price','call_put_flag'])
+#dff.style.apply(te.color_CP, column=['call_put_flag'], axis=1)
+
+#dff['ratio']=(dff['premium_margin']/100-dff.exercise_price)/last_price
+sc1,sc2 = st.columns((3,1))
+with sc2:
+    showtable = st.checkbox('Show Table')
+with sc1:
+    #cpfiltera = st.selectbox('Plot Calls/Puts',['Call','Put'])
+    cpfilter = st.radio('Plot Calls/Puts',['Call','Put'],horizontal=True)
+    
+if showtable:
+    st.dataframe(dff[['contract_date','call_put_flag','exercise_price','version_number','component_margin','premium_margin','rel_margin']].style.apply(te.color_CP, column=['call_put_flag'], axis=1),
+            use_container_width=True,             
+            column_config={
+        #"product_id": "Symbol",        
+        #"contract_date": st.column_config.NumberColumn(
+        #    "Maturity",
+        #    help="date",
+        #    format="%d",
+        #),
+        "call_put_flag":st.column_config.TextColumn('C/P',width='small'),
+        'exercise_price':st.column_config.NumberColumn(
+            'Strike',format="%.2f"),
+        'contract_date':st.column_config.NumberColumn(
+            "MaturityDate",
+            help="date",
+            format="%d",
+        ),
+        'version_number':st.column_config.TextColumn(
+            'Vers.',width="small"
+        ),
+        'component_margin':st.column_config.NumberColumn(
+            'Comp_Marg',format="%.2f"),
+        'premium_margin':st.column_config.NumberColumn(
+            'Prem_Marg',format="%.2f"),
+        },
+        hide_index=True,        
+        )
+dfplot = df_tol.loc[df_tol['call_put_flag']==cpfilter[0]].sort_values(by=['contract_date','exercise_price'])
+fig_opt = po.plot_margins(dfplot,share_name,last_price)
+st.plotly_chart(fig_opt)
+
+st.sidebar.download_button('Download Option Table',
+                   data=convert_df(df),
+                   file_name = f'option_{symbol}.csv',
+                   mime='text/csv')
+
