@@ -5,6 +5,7 @@ import option.option as opt
 import option.option_ as op_
 #import option.models as models
 import src.test_eurex as optex
+import src.test_eurex as te
 
 st.set_page_config(page_title="Option Investigator",    
                 )
@@ -35,22 +36,30 @@ def get_margins(option_set):
 def get_optionset(symbol):
     return optex.get_options(symbol)
 
-import src.test_eurex as te
 def main():
-  my_repo = opt.create_repos() # dictionary with stock data
-  market_key=st.sidebar.selectbox('Market',options=my_repo.keys(),index=0)
-  share_dict=my_repo[market_key]
+  #my_repo = opt.create_repos() # dictionary with stock data!!! NO!! Zuordnungen markets: [tickers]
+  my_db = opt.read_gsrepos() # dataframe with stock data
+  markets = opt.get_markets()
+  #my_repo = {...}
+  market_key=st.sidebar.selectbox('Market',options=markets,index=0)
+  #share_dict=my_repo[market_key]
+  share_df = my_db[my_db[market_key]==1]
   
   # here it goes
   col1,col2 = st.columns((1,1))
   with col1:
-    sharename1 = st.selectbox('Share 1',options=share_dict.keys(),index=1)
+    #sharename1 = st.selectbox('Share 1',options=share_dict.keys(),index=1)
+    sharename1 = st.selectbox('Share 1',options=share_df['_id'],index=1)
     #symbol1,symbolyahoo1 = share_dict[sharename1][:2]
+    srow1 = my_db[my_db['_id']==sharename1]
     
     # Eurex symbol (3-4 Chars)
-    symbol1 = te.SYMBOLS['reverseid'][sharename1]
+    #symbol1 = te.SYMBOLS['reverseid'][sharename1]
+    #symbol1 = srow1.index.values[0]
+    symbol1 = srow1.sec_id.values[0]
     #share_name = sym_repo[symbol][0]['sec_name']
-    symbolyahoo1 = te.get_yahoo_symb(symbol1)
+    #symbolyahoo1 = te.get_yahoo_symb(symbol1)
+    symbolyahoo1 = srow1['yahoo'].values[0]
 
 
 
@@ -60,13 +69,16 @@ def main():
     rent1 = rent1_inp/lastprice1*100 # in percent
     st.markdown(f'Dividend Return: {rent1:.2f}%')
   with col2:
-    sharename2 = st.selectbox('Share 2',options=share_dict.keys(),index=2)
+    sharename2 = st.selectbox('Share 2',options=share_df['_id'],index=2)
     #symbol2,symbolyahoo2 = share_dict[sharename2][:2]
-
+    srow2 = my_db[my_db['_id']==sharename2]
     # Eurex symbol (3-4 Chars)
-    symbol2 = te.SYMBOLS['reverseid'][sharename2]
+    #symbol2 = te.SYMBOLS['reverseid'][sharename2]
+    #symbol2 = my_db['reverseid'][sharename2]    
+    #symbol2 = srow2.index.values[0]
+    symbol2 = srow2.sec_id.values[0]
     #share_name = sym_repo[symbol][0]['sec_name']
-    symbolyahoo2 = te.get_yahoo_symb(symbol2)
+    symbolyahoo2 = srow2['yahoo'].values[0]
 
     future2,lastdate2,lastprice2,rent2,rent2abs=get_share_data(symbolyahoo2)
     st.markdown(f'**{lastprice2:.2f}** $\quad\quad$    {lastdate2}')
@@ -83,16 +95,22 @@ def main():
     ######################
     if 1:      
       option_set1 = get_optionset(symbol1)
-      df1 = get_margins(option_set1)  
-      # dict with maturity : (call margin %, put margin %)
-      market_prices1 = optex.get_margins_atmarketprice(df1,lastprice1) 
-      mat_dates = market_prices1.keys()
+      if len(option_set1)==0:
+        st.warning(f"{symbol1} not in eurex")
+      else:
+        df1 = get_margins(option_set1)  
+        # dict with maturity : (call margin %, put margin %)
+        market_prices1 = optex.get_margins_atmarketprice(df1,lastprice1) 
+        mat_dates = market_prices1.keys()
 
-      #date_len=len(mat_dates)
+      #date_len=len(mat_dates)      
       option_set2 = get_optionset(symbol2)
-      df2 = get_margins(option_set2)  
-      # dict with maturity : (call margin %, put margin %)
-      market_prices2 = optex.get_margins_atmarketprice(df2,lastprice2) 
+      if len(option_set2)==0:
+        st.warning(f"{symbol2} not in eurex")
+      else:
+        df2 = get_margins(option_set2)  
+        # dict with maturity : (call margin %, put margin %)
+        market_prices2 = optex.get_margins_atmarketprice(df2,lastprice2) 
 
       # PLOT these market prices
       fig = opt.plot_shares_2(sharename1,future1,sharename2,future2,market_prices1,market_prices2)

@@ -1,4 +1,6 @@
 import streamlit as st
+from streamlit_gsheets import GSheetsConnection
+
 from pytickersymbols import PyTickerSymbols
 import numpy as np
 import pandas as pd
@@ -156,14 +158,15 @@ def find_future_duedates(future):
 def get_history(symbol):
    ticker = get_ticker(symbol)
    history=ticker.history(period='2y')
-   today = datetime.date.today()
-   history['dates']=history.index.date
-   history.index=history.dates
-   #history.reindex()
-   history['reversedates']= history.dates.values[::-1]
-   # mirror dates from past to future:
-   #   add delta days from reversdates to today
-   history['prodates']=(today - history.dates).apply(lambda x: today + x) # shift reversedates to future
+   if not history.empty:
+    today = datetime.date.today()
+    history['dates']=history.index.date
+    history.index=history.dates
+    #history.reindex()
+    history['reversedates']= history.dates.values[::-1]
+    # mirror dates from past to future:
+    #   add delta days from reversdates to today
+    history['prodates']=(today - history.dates).apply(lambda x: today + x) # shift reversedates to future
 
    return history
 
@@ -195,14 +198,20 @@ def get_ticker(symbol):
 def get_current_rent(symbol):
     ticker = yf.Ticker(symbol)
     todays_data = ticker.history(period='2y')
-    print(todays_data.keys())
-    dividends = ticker.dividends
-    ydiv = pd.DataFrame(dividends)
-    div=ydiv.groupby(lambda x: x.year)['Dividends'].sum()
-    if len(div)>0:
-      lastdiv = div.max()
-      lastdiv = div.iloc[-1]
-    else:
+    #print(todays_data.keys())
+    #st.write(symbol)
+    try:
+      dividends = ticker.dividends
+
+      if len(dividends)>0:
+        ydiv = pd.DataFrame(dividends)
+        div=ydiv.groupby(lambda x: x.year)['Dividends'].sum()
+        lastdiv = div.max() # at max index ?
+        #lastdiv = div.iloc[-1]
+      else:
+        lastdiv=0
+    except:
+      
       lastdiv=0
     try:
       tname=ticker.info['longName']
@@ -396,8 +405,8 @@ def plot_shares(sharename,future,sharename2,future2):
     fig = make_subplots(specs=[[{"secondary_y": True}]])
     fig.add_trace(go.Scatter(x=future.index,
                     y=future['close_percent'], 
-                    text=future2['Close'] ,
-                    customdata=future2['dates'].values,
+                    text=future['Close'] ,
+                    customdata=future['dates'].values,
                     hovertemplate = 'Price: %{text:.2f}<br>Date: %{customdata}',#<extra>%{sharename2}</extra>                    
                     mode='lines',
                     line=dict(color='lightblue') ,
@@ -658,14 +667,15 @@ def create_repos():
   countries = stock_data.get_all_countries()
   indices = stock_data.get_all_indices()
   industries = stock_data.get_all_industries()
+  all = stock_data.get_all_stocks()
 
-  ixlist =['DAX','MDAX','AEX','CAC 40','IBEX 35','BEL 20','FTSE 100','SDAX']#,'NASDAQ 100','DOW JONES']
+  ixlist =['DAX','MDAX','AEX','CAC 40','IBEX 35']#,'BEL 20','FTSE 100','SDAX']#,'NASDAQ 100','DOW JONES']
   repo = {}
   for market in ixlist:
     stocks = stock_data.get_stocks_by_index(market)
     stocklist = [stock for stock in stocks if stock['name'] in eurex_existnames]
     repo[market]=share_repo(stocklist)  
-  
+  repo['all']=share_repo([stock for stock in all if stock['name'] in eurex_existnames])
   return repo
 
 def _get_symbol(entry):
@@ -680,3 +690,53 @@ def _get_symbol(entry):
 def share_repo(my_iterator):
   sharedict = {entry['name']: _get_symbol(entry) for entry in my_iterator if (type(entry) is dict) and (entry['symbol'] is not None)}  
   return sharedict
+
+### To be implemented. ###
+
+@st.cache_data(ttl=3600,show_spinner='Read from Google Sheets')
+def read_gsrepos():
+  '''
+  Read table with repo data from Google Sheets
+
+  return as a dict
+  '''
+  conn = st.connection("gsheets", type=GSheetsConnection)
+
+  df = conn.read()
+  #df.set_index('sec_id',inplace=True)
+  #del df['unnamed 0']
+  #return df.to_dict(orient='index')
+  df.dropna(inplace=True) # remove lines with no entries
+  return df
+
+@st.cache_data(ttl=3600)
+def db_name2id(dd):
+  '''
+  create reversed association of share_id (here names) to eurex_ticker
+  '''
+  return {v['_id']:k for k,v in dd.items()}
+  #return {row._id:row.sec_id for row in df.rows}
+
+def get_db():
+   repo = read_gsrepos()
+   repo['reverseid']=db_name2id(repo)
+   return repo
+
+def get_markets():
+   return ['DAX','MDAX','AEX','CAC 40','FTSE 100']#,'IBEX 35']
+
+@st.cache_data(ttl=3600,show_spinner='Read from Google Sheets')
+def read_gs_all_shares():
+  '''
+  Read table with repo data from Google Sheets
+
+  return as a df
+  '''
+  conn = st.connection("gs_all", type=GSheetsConnection)
+
+  df = conn.read()
+  #df.set_index('sec_id',inplace=True)
+  #del df['unnamed 0']
+  #return df.to_dict(orient='index')
+  #df.dropna(inplace=True) # remove lines with no entries
+  return df

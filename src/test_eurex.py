@@ -109,7 +109,7 @@ def markets():
   indices = stock_data.get_all_indices()
   industries = stock_data.get_all_industries()
 
-  ixlist =['DAX','MDAX','AEX','CAC 40','FTSE 100','IBEX 35','BEL 20','SDAX']#,'NASDAQ 100','DOW JONES']
+  ixlist =['DAX','MDAX','AEX','CAC 40','FTSE 100']#,'IBEX 35','BEL 20','SDAX']#,'NASDAQ 100','DOW JONES']
   repo = {}
   
   for market in ixlist:
@@ -187,14 +187,15 @@ def get_history(symbol:str):
    '''
    ticker = get_ticker(symbol)
    history=ticker.history(period='2y')
-   today = datetime.date.today()
-   history['dates']=history.index.date
-   history.index=history.dates
-   #history.reindex()
-   history['reversedates']= history.dates.values[::-1]
-   # mirror dates from past to future:
-   #   add delta days from reversdates to today
-   history['prodates']=(today - history.dates).apply(lambda x: today + x) # shift reversedates to future
+   if not history.empty:
+     today = datetime.date.today()
+     history['dates']=history.index.date
+     history.index=history.dates
+     #history.reindex()
+     history['reversedates']= history.dates.values[::-1]
+     # mirror dates from past to future:
+     #   add delta days from reversdates to today
+     history['prodates']=(today - history.dates).apply(lambda x: today + x) # shift reversedates to future
    return history
 
 
@@ -313,6 +314,7 @@ def get_options(symbol):
               call_put_flag=x['call_put_flag'],              
               )
             for x in series['list_series']
+              if x['version_number']=='0' # problems with VOW
             ]
   return options
 
@@ -339,14 +341,17 @@ def get_portfolio_margins(list_of_products,line_nos=[]):
     return None
 
 def df_from_portfolio(resp):
-  p_drill = pd.DataFrame(resp['drilldowns']).set_index('line_no').astype(dict(contract_date=int,maturity=int,exercise_price=float))  
-  return p_drill[['product_id', 'contract_date', 'maturity', 'call_put_flag',
+  try:
+    p_drill = pd.DataFrame(resp['drilldowns']).set_index('line_no').astype(dict(contract_date=int,maturity=int,exercise_price=float))  
+    return p_drill[['product_id', 'contract_date', 'maturity', 'call_put_flag',
        'exercise_price', 'version_number', 'net_ls_balance',
        'component_margin',
        #'component_margin_currency',
        'premium_margin',  # thats it!!
        #'premium_margin_currency'
        ]]  # dataframe with 
+  except:
+    return None
 
 def get_option_experation(df):
   # df is DataFrame from portfolio
@@ -373,7 +378,7 @@ def df_filter_date(df,from_due:int,until_due:int):
   return df.loc[(df['maturity']>=from_due)&(df['maturity']<=until_due)]
 
 # GLOBAL Data
-SYMBOLS = create_repos()  # repo by name, symbols is dict symbol -> name
+#SYMBOLS = create_repos()  # repo by name, symbols is dict symbol -> name
 
 
 if __name__=='__main__':
@@ -388,12 +393,12 @@ if __name__=='__main__':
   last_price = history.iloc[-1].Close
 
   # get options of DTE
-  option_set = get_options(symbol,last_price)
+  option_set = get_options(symbol)#‚,last_price)
   
   # get margins of option_set
   resp = get_portfolio_margins(option_set)
   df = df_from_portfolio(resp)
-  print(df_filter_date(df,datetime.datetime.strptime('202312','%Y%m'),datetime.datetime.strptime('202412','%Y%m')))
+  print(df_filter_date(df,datetime.datetime.strptime('202406','%Y%m'),datetime.datetime.strptime('202412','%Y%m')))
 ##############
 '''
 Index(['iid', 'product_id', 'contract_date', 'maturity', 'call_put_flag',
